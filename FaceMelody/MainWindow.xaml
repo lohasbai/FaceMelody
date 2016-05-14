@@ -6,13 +6,19 @@
         
         <Grid.RowDefinitions>
             <RowDefinition Height="5*"/>
-            <RowDefinition Height="70*"/>
-            <RowDefinition Height="25*"/>
+            <RowDefinition Height="65*"/>
+            <RowDefinition Height="35*"/>
         </Grid.RowDefinitions>
+
+        <Grid Name="Menu_Grid" 
+              Grid.Row="0" Grid.Column="0"
+              Background="#ecf0f1" ShowGridLines="True">
+
+        </Grid>
 
         <Grid Name="Function_Grid" 
               Grid.Row="1" Grid.Column="0"
-              Background="#2A2A2A" ShowGridLines="False">
+              Background="#2C3E50" ShowGridLines="True">
 
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="15*"/>
@@ -20,8 +26,15 @@
                 <ColumnDefinition Width="60*"/>
                 <ColumnDefinition Width="20*"/>
             </Grid.ColumnDefinitions>
-            <Button Content="Button" Grid.Column="2" HorizontalAlignment="Left" Margin="77.372,48,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
-            <TextBox Grid.Column="2" HorizontalAlignment="Left" Height="23" Margin="77.372,185,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+
+
+            
+
+        </Grid>
+
+        <Grid Name="Timeline_Grid" 
+              Grid.Row="2" Grid.Column="0"
+              Background="#2C3E50" ShowGridLines="True">
 
         </Grid>
 
