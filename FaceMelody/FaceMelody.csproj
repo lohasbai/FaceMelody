@@ -77,7 +77,7 @@
     <Compile Include="SystemCore\DebugForm.Designer.cs">
       <DependentUpon>DebugForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="MainWorkshop.xaml.cs">
+    <Compile Include="GUI\MainWorkshop.xaml.cs">
       <DependentUpon>MainWorkshop.xaml</DependentUpon>
     </Compile>
     <Compile Include="SystemCore\SoundTools.cs" />
@@ -86,7 +86,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="MainWorkshop.xaml">
+    <Page Include="GUI\MainWorkshop.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -122,10 +122,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="EffectOff_Icon.png">
+    <Resource Include="GUI\EffectOff_Icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="EffectOn_Icon.png">
+    <Resource Include="GUI\EffectOn_Icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
@@ -148,8 +148,8 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Resource Include="Icon\EffectOff_Icon.png" />
-    <Resource Include="Icon\EffectOn_Icon.png" />
+    <Resource Include="GUI\Icon\EffectOff_Icon.png" />
+    <Resource Include="GUI\Icon\EffectOn_Icon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
