@@ -28,8 +28,13 @@ namespace FaceMelody
         public string[] materialList;
         public int materialNum;
 
+        public bool isSelect;
+        public bool isArea;
+        public bool isEffect;
+        public bool isDelete;
+
+
         public bool isDrawing;
-        public bool isAreaChose;
         public double startX;
         public double endX;
 
@@ -40,8 +45,26 @@ namespace FaceMelody
 
             materialList = new string[15];
             materialNum = 0;
-            isAreaChose = false;
+            isArea = false;
             isDrawing = false;
+        }
+
+        #region Menu
+
+        private void OpenFile_Menu_Click(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
+
+            if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+                if (filePath != "" || filePath != null)
+                {
+                    this.VideoPlayer.Source = new Uri(filePath);
+
+                    this.VideoPlayer.Play();
+                }
+            }
         }
 
         private void AddMaterial_Click(object sender, RoutedEventArgs e)
@@ -57,7 +80,9 @@ namespace FaceMelody
                 }
             }
         }
+        #endregion
 
+        #region Material
         private void AddMaterial(string filePath)
         {
             Material_StackPanel.Height += 50;
@@ -74,7 +99,7 @@ namespace FaceMelody
                 Background = new SolidColorBrush(Color.FromArgb(255, 34, 33, 37)),
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
                 Height = 50,
-                Width = 130,
+                Width = 192,
             };
 
             materialList[materialNum] = filePath;
@@ -82,8 +107,6 @@ namespace FaceMelody
 
             List_Label.MouseDown += new MouseButtonEventHandler(ChooseMaterial_Click);
             Material_StackPanel.Children.Add(List_Label);
-
-
         }
 
         private void ChooseMaterial_Click(object sender, RoutedEventArgs e)
@@ -94,19 +117,76 @@ namespace FaceMelody
             string path = materialList[Convert.ToInt16(sourceName.Substring(1, 1))];
             MessageBox.Show(path);
         }
+        #endregion
 
-        #region ManipulationMenu
-        private void AreaChoice_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        #region Display
+
+        #endregion
+
+        #region Information
+
+        #endregion
+
+        #region Manipulation
+        private void Select_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (!isAreaChose)
+            this.VideoPlayer.Position = TimeSpan.FromSeconds(10);
+            this.VideoPlayer.Play();
+            this.VideoPlayer.Pause();
+
+
+            if (!isSelect)
             {
-                isAreaChose = true;
-                AreaChoice_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOn_Icon.png", UriKind.Relative));
+                isSelect = true;
+                Select_Image.Source = new BitmapImage(new Uri(@".\Icon\SelectOn_Icon.png", UriKind.Relative));
             }
             else
             {
-                isAreaChose = false;
-                AreaChoice_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOff_Icon.png", UriKind.Relative));
+                isSelect = false;
+                Select_Image.Source = new BitmapImage(new Uri(@".\Icon\SelectOff_Icon.png", UriKind.Relative));
+            }
+        }
+        private void Area_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isArea)
+            {
+                isArea = true;
+                Area_Image.Source = new BitmapImage(new Uri(@".\Icon\AreaOn_Icon.png", UriKind.Relative));
+            }
+            else
+            {
+                isArea = false;
+                Area_Image.Source = new BitmapImage(new Uri(@".\Icon\AreaOff_Icon.png", UriKind.Relative));
+            }
+        }
+
+        private void Effect_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            this.VideoPlayer.Pause();
+
+            if (!isEffect)
+            {
+                isEffect = true;
+                Effect_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOn_Icon.png", UriKind.Relative));
+            }
+            else
+            {
+                isEffect = false;
+                Effect_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOff_Icon.png", UriKind.Relative));
+            }
+        }
+
+        private void Delete_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isDelete)
+            {
+                isDelete = true;
+                Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOn_Icon.png", UriKind.Relative));
+            }
+            else
+            {
+                isDelete = false;
+                Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOff_Icon.png", UriKind.Relative));
             }
         }
         #endregion
@@ -115,7 +195,7 @@ namespace FaceMelody
 
         private void Timeline_Canvas_Click(object sender, MouseButtonEventArgs e)
         {
-            if (isAreaChose)
+            if (isArea)
             {
                 Timeline_Canvas.Children.Clear();
                 Point startPoint = e.GetPosition(this.Timeline_Canvas);
@@ -127,7 +207,7 @@ namespace FaceMelody
 
         private void Timeline_Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isDrawing && isAreaChose)
+            if (isDrawing && isArea)
             {
                 Point endPoint = e.GetPosition(this.Timeline_Canvas);
                 endX = endPoint.X;
@@ -157,7 +237,7 @@ namespace FaceMelody
 
         private void Timeline_Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (isAreaChose)
+            if (isArea)
             {
                 isDrawing = false;
                 MessageBox.Show(startX.ToString() + "," + endX.ToString());
@@ -165,5 +245,8 @@ namespace FaceMelody
         }
 
         #endregion
+
+
+
     }
 }

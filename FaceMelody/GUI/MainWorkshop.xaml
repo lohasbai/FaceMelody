@@ -9,8 +9,8 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="5*"/>
-            <RowDefinition Height="60*"/>
-            <RowDefinition Height="35*"/>
+            <RowDefinition Height="70*"/>
+            <RowDefinition Height="25*"/>
         </Grid.RowDefinitions>
 
         <Grid Name="Menu_Grid" 
@@ -18,7 +18,7 @@
               Background="#ecf0f1" ShowGridLines="False">
             <Menu>
                 <MenuItem Header="文件">
-                    <MenuItem Header="打开"/>
+                    <MenuItem Name="OpenFile_Menu" Click="OpenFile_Menu_Click" Header="打开"/>
                     <MenuItem Header="保存"/>
                     <MenuItem Header="退出"/>
                 </MenuItem>
@@ -59,7 +59,11 @@
 
             <Grid Name="Display_Grid" 
               Grid.Row="1" Grid.Column="1"
-              Background="#303037" ShowGridLines="False">
+              Background="#000000" ShowGridLines="False">
+                <MediaElement Name="VideoPlayer" 
+                              Margin="0,0,0,30" Volume="0" LoadedBehavior="Manual"  />
+                <Image Name="Play_Image" MouseDown="Area_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
+                   Stretch="Fill" HorizontalAlignment="Center" Margin="0,0,0,5" VerticalAlignment="Bottom" Height="20" Width="20" />
             </Grid>
 
             <Grid Name="Information_Grid" 
@@ -72,16 +76,23 @@
         <Grid Name="Timeline_Grid" 
               Grid.Row="2" Grid.Column="0"
               Background="#303037" ShowGridLines="False">
-            <Image Source=".\Icon\EffectOff_Icon.png" Stretch="Fill" HorizontalAlignment="Left" Margin="5,35,0,0" VerticalAlignment="Top" Height="20" Width="20" />
-            <Image Name="AreaChoice_Image" MouseDown="AreaChoice_Image_MouseDown" Source=".\Icon\EffectOff_Icon.png" 
-                   Stretch="Fill" HorizontalAlignment="Left" Margin="5,65,0,0" VerticalAlignment="Top" Height="20" Width="20" />
-            <Image Source=".\Icon\EffectOff_Icon.png" Stretch="Fill" HorizontalAlignment="Left" Margin="5,95,0,0" VerticalAlignment="Top" Height="20" Width="20" />
-            <Image Source=".\Icon\EffectOff_Icon.png" Stretch="Fill" HorizontalAlignment="Left" Margin="5,125,0,0" VerticalAlignment="Top" Height="20" Width="20" />
-            <Image Source=".\Icon\EffectOff_Icon.png" Stretch="Fill" HorizontalAlignment="Left" Margin="5,155,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="254.827"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Image Name="Select_Image" MouseDown="Select_Image_MouseDown" Source=".\Icon\SelectOff_Icon.png" 
+                   Stretch="Fill" HorizontalAlignment="Left" Margin="5,25,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+            <Image Name="Area_Image" MouseDown="Area_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
+                   Stretch="Fill" HorizontalAlignment="Left" Margin="5,55,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+            <Image Name="Effect_Image" MouseDown="Effect_Image_MouseDown" Source=".\Icon\EffectOff_Icon.png" 
+                   Stretch="Fill" HorizontalAlignment="Left" Margin="5,85,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+            <Image Name="Delete_Image" MouseDown="Delete_Image_MouseDown" Source=".\Icon\DeleteOff_Icon.png" 
+                   Stretch="Fill" HorizontalAlignment="Left" Margin="5,115,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+
             <Canvas Name="Timeline_Canvas" MouseLeftButtonDown="Timeline_Canvas_Click" 
                     MouseMove="Timeline_Canvas_MouseMove" 
                     MouseUp="Timeline_Canvas_MouseUp"
-                    HorizontalAlignment="Left" Height="170" Margin="55,30,0,0" VerticalAlignment="Top" Width="900" Background="#202020"/>
+                    HorizontalAlignment="Left" Height="110" Margin="55,30,-0.026,0" VerticalAlignment="Top" Width="900" Background="#202020" Grid.ColumnSpan="2"/>
         </Grid>
 
     </Grid>

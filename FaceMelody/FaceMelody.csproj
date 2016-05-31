@@ -122,14 +122,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="GUI\EffectOff_Icon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="GUI\EffectOn_Icon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">
       <Visible>False</Visible>
       <ProductName>Microsoft .NET Framework 4.5 %28x86 和 x64%29</ProductName>
@@ -146,7 +138,14 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="GUI\Icon\AreaOff_Icon.png" />
+    <Resource Include="GUI\Icon\AreaOn_Icon.png" />
+    <Resource Include="GUI\Icon\DeleteOff_Icon.png" />
+    <Resource Include="GUI\Icon\DeleteOn_Icon.png" />
+    <Resource Include="GUI\Icon\SelectOff_Icon.png" />
+    <Resource Include="GUI\Icon\SelectOn_Icon.png" />
+  </ItemGroup>
   <ItemGroup>
     <Resource Include="GUI\Icon\EffectOff_Icon.png" />
     <Resource Include="GUI\Icon\EffectOn_Icon.png" />
