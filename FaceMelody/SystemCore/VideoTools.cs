@@ -18,7 +18,6 @@ namespace FaceMelody.SystemCore
         const int TIME_OUT = 5 * 60 * 100;
         #endregion
 
-
         #region BASE_STRUCT
         /// <summary>
         /// 基本视频类，包含一个视频文件名和一个音频
