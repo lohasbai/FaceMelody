@@ -20,7 +20,7 @@ namespace FaceMelody.SystemCore
 
         #region BASE_STRUCT
         /// <summary>
-        /// 基本视频类，包含一个视频文件名和一个音频
+        /// 基本视频结构体，包含一个视频文件名和一个音频
         /// </summary>
         public struct BaseVideo
         {
