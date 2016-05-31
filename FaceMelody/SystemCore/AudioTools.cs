@@ -8,8 +8,10 @@ using System.IO;
 
 namespace FaceMelody.SystemCore
 {
-    class SoundTools
+    class AudioTools
     {
+        #region CONST
+
         const int _chunkID = 1179011410;
         const int _riffType = 1163280727;
         const int _fmtID = 544501094;
@@ -18,10 +20,13 @@ namespace FaceMelody.SystemCore
         const Int16 _fmtCode = 1;
         const Int16 _fmtBlockAlign = 4;
 
+        #endregion
+
+        #region BASE_STRUCT
         /// <summary>
         /// 基本声音类，包含声音数组长度，左右声道数组内容
         /// </summary>
-        public struct BaseSound
+        public struct BaseAudio
         {
             /// <summary>
             /// 左声道数据（单声道时为主声道数据）
@@ -48,7 +53,9 @@ namespace FaceMelody.SystemCore
                 RVoice = null;
             }
         }
+        #endregion
 
+        #region PUBLIC_FUNCTION
         /// <summary>
         /// <para>读取一个wav格式音频，返回数组流</para>
         /// <para>读取失败则length为0</para>
@@ -56,9 +63,9 @@ namespace FaceMelody.SystemCore
         /// </summary>
         /// <param name="file">包含文件名的完整路径</param>
         /// <returns></returns>
-        public BaseSound sound_reader(string file)
+        public BaseAudio audio_reader(string file)
         {
-            BaseSound ret = new BaseSound();
+            BaseAudio ret = new BaseAudio();
             float[] L,R;
             int sample_rate = 0;
             if (readWav(file, out L, out R, ref sample_rate))
@@ -76,10 +83,10 @@ namespace FaceMelody.SystemCore
         /// <summary>
         /// 将BaseSound写入wav文件
         /// </summary>
-        /// <param name="sound">要写入的声音</param>
+        /// <param name="audio">要写入的声音</param>
         /// <param name="file">包含文件名的完整路径</param>
         /// <returns></returns>
-        public bool sound_writer(BaseSound sound, string file)
+        public bool audio_writer(BaseAudio audio, string file)
         {
             try
             {
@@ -87,8 +94,8 @@ namespace FaceMelody.SystemCore
                     File.Delete(file);
                 FileStream fs = new FileStream(file, FileMode.Create);
                 BinaryWriter bw = new BinaryWriter(fs);
-                bool double_wave = (sound.RVoice != null);
-                int bytes = ((double_wave) ? (2) : (1)) * sound.LVoice.Count * BaseSound.BitDepth / 8;
+                bool double_wave = (audio.RVoice != null);
+                int bytes = ((double_wave) ? (2) : (1)) * audio.LVoice.Count * BaseAudio.BitDepth / 8;
                 //chunk 1
                 bw.Write(_chunkID);
                 bw.Write(9 * 4 + bytes);
@@ -98,10 +105,10 @@ namespace FaceMelody.SystemCore
                 bw.Write(_fmtSize);
                 bw.Write(_fmtCode);
                 bw.Write((double_wave ? ((short)2) : ((short)1)));
-                bw.Write(sound.SampleRate);
-                bw.Write(sound.SampleRate * (double_wave ? (2) : (1)) * BaseSound.BitDepth / 8);
+                bw.Write(audio.SampleRate);
+                bw.Write(audio.SampleRate * (double_wave ? (2) : (1)) * BaseAudio.BitDepth / 8);
                 bw.Write(_fmtBlockAlign);
-                bw.Write((short)BaseSound.BitDepth);
+                bw.Write((short)BaseAudio.BitDepth);
                 //chunk 3
                 bw.Write(_dataID);
                 bw.Write(bytes);
@@ -110,10 +117,10 @@ namespace FaceMelody.SystemCore
                 {
                     for (int i = 0; i < bytes / 2; i++)
                     {
-                        Int16 to_save = (Int16)(sound.LVoice[i] * Int16.MaxValue);
+                        Int16 to_save = (Int16)(audio.LVoice[i] * Int16.MaxValue);
                         byte[] s1 = BitConverter.GetBytes(to_save);
                         bw.Write(s1);
-                        to_save = (Int16)(sound.RVoice[i] * Int16.MaxValue);
+                        to_save = (Int16)(audio.RVoice[i] * Int16.MaxValue);
                         byte[] s2 = BitConverter.GetBytes(to_save);
                         bw.Write(s2);
                     }
@@ -122,7 +129,7 @@ namespace FaceMelody.SystemCore
                 {
                     for (int i = 0; i < bytes; i++)
                     {
-                        Int16 to_save = (Int16)(sound.LVoice[i] * Int16.MaxValue);
+                        Int16 to_save = (Int16)(audio.LVoice[i] * Int16.MaxValue);
                         byte[] s1 = BitConverter.GetBytes(to_save);
                         bw.Write(s1);
                     }
@@ -138,7 +145,9 @@ namespace FaceMelody.SystemCore
                 return false;
             }
         }
+        #endregion
 
+        #region PRIVATE_FUNCTION
         private bool readWav(string filename, out float[] L, out float[] R,ref int sample_rate)
         {
             L = R = null;
@@ -244,5 +253,6 @@ namespace FaceMelody.SystemCore
                 //left = new float[ 1 ]{ 0f };
             }
         }
+        #endregion
     }
 }

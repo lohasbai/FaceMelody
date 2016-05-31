@@ -80,12 +80,13 @@
     <Compile Include="GUI\MainWorkshop.xaml.cs">
       <DependentUpon>MainWorkshop.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SystemCore\SoundTools.cs" />
+    <Compile Include="SystemCore\AudioTools.cs" />
     <Compile Include="SystemCore\TimeLineCore.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="SystemCore\VideoTools.cs" />
     <Page Include="GUI\MainWorkshop.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -119,7 +120,9 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="GUI\EffectOff_Icon.png">
