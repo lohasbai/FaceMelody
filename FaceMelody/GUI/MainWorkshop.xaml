@@ -62,7 +62,7 @@
               Background="#000000" ShowGridLines="False">
                 <MediaElement Name="VideoPlayer" 
                               Margin="0,0,0,30" Volume="0" LoadedBehavior="Manual"  />
-                <Image Name="Play_Image" MouseDown="Area_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
+                <Image Name="Play_Image" MouseDown="Play_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Center" Margin="0,0,0,5" VerticalAlignment="Bottom" Height="20" Width="20" />
             </Grid>
 
