@@ -43,11 +43,11 @@
                 <ColumnDefinition Width="60*"/>
                 <ColumnDefinition Width="20*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Row="0" Grid.Column="0" BorderThickness="10" BorderBrush="White">
+            <Border Grid.Row="0" Grid.Column="0" BorderThickness="1" BorderBrush="White">
             </Border>
-            <Border Grid.Row="0" Grid.Column="1" BorderThickness="10" BorderBrush="White">
+            <Border Grid.Row="0" Grid.Column="1" BorderThickness="1" BorderBrush="White">
             </Border>
-            <Border Grid.Row="0" Grid.Column="2" BorderThickness="10" BorderBrush="White">
+            <Border Grid.Row="0" Grid.Column="2" BorderThickness="1" BorderBrush="White">
             </Border>
 
             <Grid Name="Material_Grid" 
@@ -59,11 +59,14 @@
 
             <Grid Name="Display_Grid" 
               Grid.Row="1" Grid.Column="1"
-              Background="#000000" ShowGridLines="False">
-                <MediaElement Name="VideoPlayer" 
+              Background="#80000000" ShowGridLines="False" 
+                  MouseEnter="Display_Grid_MouseEnter"
+                  MouseLeave="Display_Grid_MouseLeave">
+                <MediaElement Name="VideoPlayer" MediaEnded="VideoPlayer_MediaEnded" MediaOpened="VideoPlayer_MediaOpened"
                               Margin="0,0,0,30" Volume="0" LoadedBehavior="Manual"  />
-                <Image Name="Play_Image" MouseDown="Play_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
-                   Stretch="Fill" HorizontalAlignment="Center" Margin="0,0,0,5" VerticalAlignment="Bottom" Height="20" Width="20" />
+                <Image Name="Play_Image" MouseDown="Play_Image_MouseDown" Source=".\Icon\Play_Icon.png" 
+                   Stretch="Fill" Visibility="Hidden"
+                       HorizontalAlignment="Center" Margin="0,0,0,5" VerticalAlignment="Bottom" Height="20" Width="20" />
             </Grid>
 
             <Grid Name="Information_Grid" 
@@ -76,23 +79,80 @@
         <Grid Name="Timeline_Grid" 
               Grid.Row="2" Grid.Column="0"
               Background="#303037" ShowGridLines="False">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="254.827"/>
-                <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
+
             <Image Name="Select_Image" MouseDown="Select_Image_MouseDown" Source=".\Icon\SelectOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,25,0,0" VerticalAlignment="Top" Height="20" Width="20" />
             <Image Name="Area_Image" MouseDown="Area_Image_MouseDown" Source=".\Icon\AreaOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,55,0,0" VerticalAlignment="Top" Height="20" Width="20" />
             <Image Name="Effect_Image" MouseDown="Effect_Image_MouseDown" Source=".\Icon\EffectOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,85,0,0" VerticalAlignment="Top" Height="20" Width="20" />
+                <Popup x:Name="Effect_Pop" Width="115" Height="125"
+                               StaysOpen="True" 
+                               IsOpen="False" 
+                               AllowsTransparency="True"
+                               PopupAnimation="Slide"
+                               PlacementTarget="{Binding ElementName= Effect_Image}"
+                               Placement="Bottom"
+                               >
+                <Canvas Background="#802C3E50" Height="125">
+                    <Label Content="渐 弱" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="渐 强" HorizontalAlignment="Left" Margin="60,5,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="倒 放" HorizontalAlignment="Left" Margin="5,35,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="回 音" HorizontalAlignment="Left" Margin="60,35,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="滤 波" HorizontalAlignment="Left" Margin="5,65,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="换声道" HorizontalAlignment="Left" Margin="60,65,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                    <Label Content="变 调" HorizontalAlignment="Left" Margin="5,95,0,0" VerticalAlignment="Top" 
+                               Height="25" Width="50" Background="#C07F8C8D" 
+                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
+                </Canvas>
+            </Popup>
             <Image Name="Delete_Image" MouseDown="Delete_Image_MouseDown" Source=".\Icon\DeleteOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,115,0,0" VerticalAlignment="Top" Height="20" Width="20" />
 
-            <Canvas Name="Timeline_Canvas" MouseLeftButtonDown="Timeline_Canvas_Click" 
-                    MouseMove="Timeline_Canvas_MouseMove" 
-                    MouseUp="Timeline_Canvas_MouseUp"
-                    HorizontalAlignment="Left" Height="110" Margin="55,30,-0.026,0" VerticalAlignment="Top" Width="900" Background="#202020" Grid.ColumnSpan="2"/>
+            <Label Content="0:00" HorizontalAlignment="Left" Margin="70,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="0:15" HorizontalAlignment="Left" Margin="170,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="0:30" HorizontalAlignment="Left" Margin="270,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="0:45" HorizontalAlignment="Left" Margin="370,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="1:00" HorizontalAlignment="Left" Margin="470,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="1:15" HorizontalAlignment="Left" Margin="570,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="1:30" HorizontalAlignment="Left" Margin="670,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="1:45" HorizontalAlignment="Left" Margin="770,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            <Label Content="2:00" HorizontalAlignment="Left" Margin="870,2,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="8"/>
+            
+            <Label Name="Temp_Label" Content=" 视频" HorizontalAlignment="Left" Margin="40,25,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="10"/>
+            <Label Content="音轨 1" HorizontalAlignment="Left" Margin="40,55,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="10"/>
+            <Label Content="音轨 2" HorizontalAlignment="Left" Margin="40,85,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="10"/>
+            <Label Content="音轨 3" HorizontalAlignment="Left" Margin="40,115,0,0" VerticalAlignment="Top" 
+                   Foreground="White" FontSize="10"/>
+            
+            <Canvas Name="Timeline_Area_Canvas" MouseLeftButtonDown="Timeline_Area_Canvas_Click" 
+                    MouseUp="Timeline_Area_Canvas_MouseUp"
+                    HorizontalAlignment="Left" Height="120" Width="870" Margin="80,20,0,0" 
+                    VerticalAlignment="Top" Background="Transparent" Grid.ColumnSpan="2"/>
         </Grid>
 
     </Grid>
