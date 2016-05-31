@@ -16,5 +16,10 @@ namespace FaceMelody
         {
             InitializeComponent();
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            SystemCore.AudioTools a = new SystemCore.AudioTools();
+        }
     }
 }
