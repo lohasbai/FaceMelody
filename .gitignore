@@ -7,6 +7,7 @@ Material
 *.user
 *.userosscache
 *.sln.docstates
+*_no_sync_*
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
