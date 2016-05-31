@@ -28,17 +28,18 @@ namespace FaceMelody
         public string[] materialList;
         public int materialNum;
 
+        public bool isDrawing;
+        public bool isAreaChose;
+        public double startX;
+        public double endX;
+
+
         public MainWorkshop()
         {
             InitializeComponent();
 
             materialList = new string[15];
             materialNum = 0;
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            Test_Button.Content = "Clicked";
         }
 
         private void AddMaterial_Click(object sender, RoutedEventArgs e)
@@ -93,10 +94,50 @@ namespace FaceMelody
         }
 
 
-        private void ViewMaterial_Click(object sender, RoutedEventArgs e)
+        private void Timeline_Canvas_Click(object sender, MouseButtonEventArgs e)
         {
-
+            Timeline_Canvas.Children.Clear();
+            Point startPoint = e.GetPosition(this.Timeline_Canvas);
+            isDrawing = true;
+            startX = startPoint.X;
+            endX = startX;
         }
 
+        private void Timeline_Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDrawing)
+            {
+                Point endPoint = e.GetPosition(this.Timeline_Canvas);
+                endX = endPoint.X;
+                double width = endX - startX;
+                if (width < 0)
+                {
+                    width = -width;
+                }
+
+                Rectangle choiceArea = new Rectangle();
+                //choiceArea.Name = "choiceArea_Rectangle";
+                choiceArea.Width = width;
+                choiceArea.Height = 130;
+                if (endX - startX > 0)
+                {
+                    choiceArea.SetValue(Canvas.LeftProperty, startX);
+                }
+                else
+                {
+                    choiceArea.SetValue(Canvas.LeftProperty, endX);
+                }
+                SolidColorBrush myBrush = new SolidColorBrush(Colors.Green);
+                choiceArea.Fill = myBrush;
+                Timeline_Canvas.Children.Insert(0, choiceArea);
+            }
+            
+        }
+
+        private void Timeline_Canvas_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            isDrawing = false;
+            MessageBox.Show(startX.ToString() + "," +  endX.ToString());
+        }
     }
 }
