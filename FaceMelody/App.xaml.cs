@@ -13,5 +13,19 @@ namespace FaceMelody
     /// </summary>
     public partial class App : Application
     {
+        /// <summary>
+        /// 启动主窗口时注释后两行，启动DEBUG窗口时注释前两行
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Application_Startup(object sender, StartupEventArgs e)
+        {
+
+            //Application currApp = Application.Current;
+            //currApp.StartupUri = new Uri("GUI/MainWorkshop.xaml", UriKind.RelativeOrAbsolute);
+
+            System.Windows.Forms.Application.Run(new DebugForm());
+            Shutdown();
+        }
     }
 }
