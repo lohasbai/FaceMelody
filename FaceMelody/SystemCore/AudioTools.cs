@@ -24,7 +24,7 @@ namespace FaceMelody.SystemCore
 
         #region BASE_STRUCT
         /// <summary>
-        /// 基本声音类，包含声音数组长度，左右声道数组内容
+        /// 基本声音结构体，包含声音数组长度，左右声道数组内容
         /// </summary>
         public struct BaseAudio
         {
@@ -56,6 +56,7 @@ namespace FaceMelody.SystemCore
         #endregion
 
         #region PUBLIC_FUNCTION
+
         /// <summary>
         /// <para>读取一个wav格式音频，返回数组流</para>
         /// <para>读取失败则length为0</para>
@@ -145,6 +146,48 @@ namespace FaceMelody.SystemCore
                 return false;
             }
         }
+
+        /// <summary>
+        /// 将音频减去一段，若出错将返回原音频
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后</para>
+        /// </summary>
+        /// <param name="src">音频源</param>
+        /// <param name="start">开始毫秒数</param>
+        /// <param name="end">结束毫秒数</param>
+        /// <returns>处理后的音频</returns>
+        public BaseAudio audio_cutter(BaseAudio src,int start, int end)
+        {
+            if (src.LVoice == null || src.LVoice.Count == 0 || src.SampleRate == 0 || start >= end || end <= 0)
+                return src;
+            int full_milisec = src.LVoice.Count * 1000 / src.SampleRate;
+            int sample_start,sample_end;
+            if (start <= 0)
+                sample_start = 0;
+            else if (start >= full_milisec)
+                return src;
+            else
+                sample_start = start * src.SampleRate / 1000;
+            if (end >= full_milisec)
+                sample_end = src.LVoice.Count;
+            else
+                sample_end = end * src.SampleRate / 1000;
+            if (sample_start == 0 && sample_end == src.LVoice.Count)
+                return new BaseAudio();
+
+            BaseAudio ret = new BaseAudio();
+            ret.LVoice = new List<float>(src.LVoice.ToArray());
+            if (src.RVoice != null)
+                ret.RVoice = new List<float>(src.RVoice.ToArray());
+            ret.SampleRate = src.SampleRate;
+
+            ret.LVoice.RemoveRange(sample_start, sample_end - sample_start);
+            if(ret.RVoice != null)
+                ret.RVoice.RemoveRange(sample_start, sample_end - sample_start);
+
+            return ret;
+        }
+
         #endregion
 
         #region PRIVATE_FUNCTION
