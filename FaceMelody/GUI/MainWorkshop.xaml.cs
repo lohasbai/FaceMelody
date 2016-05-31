@@ -33,6 +33,7 @@ namespace FaceMelody
         public bool isEffect;
         public bool isDelete;
 
+        public bool isPlay;
 
         public bool isDrawing;
         public double startX;
@@ -47,6 +48,7 @@ namespace FaceMelody
             materialNum = 0;
             isArea = false;
             isDrawing = false;
+            isPlay = false;
         }
 
         #region Menu
@@ -61,8 +63,6 @@ namespace FaceMelody
                 if (filePath != "" || filePath != null)
                 {
                     this.VideoPlayer.Source = new Uri(filePath);
-
-                    this.VideoPlayer.Play();
                 }
             }
         }
@@ -120,7 +120,19 @@ namespace FaceMelody
         #endregion
 
         #region Display
-
+        private void Play_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isPlay)
+            {
+                isPlay = true;
+                this.VideoPlayer.Play();
+            }
+            else
+            {
+                isPlay = false;
+                this.VideoPlayer.Pause();
+            }
+        }
         #endregion
 
         #region Information
@@ -130,11 +142,6 @@ namespace FaceMelody
         #region Manipulation
         private void Select_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            this.VideoPlayer.Position = TimeSpan.FromSeconds(10);
-            this.VideoPlayer.Play();
-            this.VideoPlayer.Pause();
-
-
             if (!isSelect)
             {
                 isSelect = true;
@@ -162,6 +169,9 @@ namespace FaceMelody
 
         private void Effect_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            this.VideoPlayer.Position += TimeSpan.FromSeconds(5);
+            this.VideoPlayer.Play();
+            Thread.Sleep(50);
             this.VideoPlayer.Pause();
 
             if (!isEffect)
@@ -245,6 +255,8 @@ namespace FaceMelody
         }
 
         #endregion
+
+
 
 
 
