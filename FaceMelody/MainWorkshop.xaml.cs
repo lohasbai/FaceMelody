@@ -40,6 +40,8 @@ namespace FaceMelody
 
             materialList = new string[15];
             materialNum = 0;
+            isAreaChose = false;
+            isDrawing = false;
         }
 
         private void AddMaterial_Click(object sender, RoutedEventArgs e)
@@ -93,19 +95,39 @@ namespace FaceMelody
             MessageBox.Show(path);
         }
 
+        #region ManipulationMenu
+        private void AreaChoice_Image_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isAreaChose)
+            {
+                isAreaChose = true;
+                AreaChoice_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOn_Icon.png", UriKind.Relative));
+            }
+            else
+            {
+                isAreaChose = false;
+                AreaChoice_Image.Source = new BitmapImage(new Uri(@".\Icon\EffectOff_Icon.png", UriKind.Relative));
+            }
+        }
+        #endregion
+
+        #region Timeline
 
         private void Timeline_Canvas_Click(object sender, MouseButtonEventArgs e)
         {
-            Timeline_Canvas.Children.Clear();
-            Point startPoint = e.GetPosition(this.Timeline_Canvas);
-            isDrawing = true;
-            startX = startPoint.X;
-            endX = startX;
+            if (isAreaChose)
+            {
+                Timeline_Canvas.Children.Clear();
+                Point startPoint = e.GetPosition(this.Timeline_Canvas);
+                isDrawing = true;
+                startX = startPoint.X;
+                endX = startX;
+            }
         }
 
         private void Timeline_Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isDrawing)
+            if (isDrawing && isAreaChose)
             {
                 Point endPoint = e.GetPosition(this.Timeline_Canvas);
                 endX = endPoint.X;
@@ -116,7 +138,6 @@ namespace FaceMelody
                 }
 
                 Rectangle choiceArea = new Rectangle();
-                //choiceArea.Name = "choiceArea_Rectangle";
                 choiceArea.Width = width;
                 choiceArea.Height = 130;
                 if (endX - startX > 0)
@@ -136,8 +157,13 @@ namespace FaceMelody
 
         private void Timeline_Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            isDrawing = false;
-            MessageBox.Show(startX.ToString() + "," +  endX.ToString());
+            if (isAreaChose)
+            {
+                isDrawing = false;
+                MessageBox.Show(startX.ToString() + "," + endX.ToString());
+            }
         }
+
+        #endregion
     }
 }
