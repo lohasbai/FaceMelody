@@ -50,19 +50,20 @@ namespace FaceMelody
             //    textBox1.Text += et.img_last_emotions[i].Scores.Surprise.ToString();
             //}
 
+
             
-            EmotionTools.VideoEmotionResultPer100MiliSec video_result = 
-                await et.get_emotion_from_video_file("_no_sync_test_ver_2.mp4");
-            last = video_result;
-            for (int i = 0; i < video_result.scores.Count; i++)
-            {
-                if (i % 10 == 0)
-                    textBox1.Text += "\r\n" + (i / 10).ToString() + ":";
-                if (video_result.has_face[i] == false)
-                    textBox1.Text += "\r\nNONE!";
-                else
-                    textBox1.Text += "\r\n" + Get_Best_Emotion(video_result.scores[i]);
-            }
+            //EmotionTools.VideoEmotionResultPer100MiliSec video_result = 
+            //    await et.get_emotion_from_video_file("_no_sync_test_ver_2.mp4");
+            //last = video_result;
+            //for (int i = 0; i < video_result.scores.Count; i++)
+            //{
+            //    if (i % 10 == 0)
+            //        textBox1.Text += "\r\n" + (i / 10).ToString() + ":";
+            //    if (video_result.has_face[i] == false)
+            //        textBox1.Text += "\r\nNONE!";
+            //    else
+            //        textBox1.Text += "\r\n" + Get_Best_Emotion(video_result.scores[i]);
+            //}
 
         }
 

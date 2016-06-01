@@ -40,10 +40,12 @@ namespace FaceMelody.SystemCore
             /// 采样率
             /// </summary>
             public int SampleRate;
+
             /// <summary>
             /// 比特深度，勿改
             /// </summary>
             public const int BitDepth = 16;
+
             /// <summary>
             /// 清空本段声音
             /// </summary>
@@ -51,6 +53,19 @@ namespace FaceMelody.SystemCore
             {
                 LVoice = null;
                 RVoice = null;
+            }
+            /// <summary>
+            /// 完全复制
+            /// </summary>
+            /// <param name="dst">待复制到的目标</param>
+            public void copy_to(BaseAudio dst)
+            {
+                dst.clear();
+                dst.LVoice = new List<float>(this.LVoice.ToArray());
+                if (this.RVoice != null)
+                    dst.RVoice = new List<float>(this.RVoice.ToArray());
+                dst.SampleRate = this.SampleRate;
+                return;
             }
         }
         #endregion
@@ -158,28 +173,15 @@ namespace FaceMelody.SystemCore
         /// <returns>处理后的音频</returns>
         public BaseAudio audio_cutter(BaseAudio src,int start, int end)
         {
-            if (src.LVoice == null || src.LVoice.Count == 0 || src.SampleRate == 0 || start >= end || end <= 0)
+            int sample_start, sample_end;
+            if (!locate(src, start, end, out sample_start, out sample_end))
                 return src;
-            int full_milisec = src.LVoice.Count * 1000 / src.SampleRate;
-            int sample_start,sample_end;
-            if (start <= 0)
-                sample_start = 0;
-            else if (start >= full_milisec)
-                return src;
-            else
-                sample_start = start * src.SampleRate / 1000;
-            if (end >= full_milisec)
-                sample_end = src.LVoice.Count;
-            else
-                sample_end = end * src.SampleRate / 1000;
+
             if (sample_start == 0 && sample_end == src.LVoice.Count)
                 return new BaseAudio();
 
             BaseAudio ret = new BaseAudio();
-            ret.LVoice = new List<float>(src.LVoice.ToArray());
-            if (src.RVoice != null)
-                ret.RVoice = new List<float>(src.RVoice.ToArray());
-            ret.SampleRate = src.SampleRate;
+            src.copy_to(ret);
 
             ret.LVoice.RemoveRange(sample_start, sample_end - sample_start);
             if(ret.RVoice != null)
@@ -188,10 +190,69 @@ namespace FaceMelody.SystemCore
             return ret;
         }
 
+        /// <summary>
+        /// 处理音频渐强渐弱，若出错将返回原音频
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后</para>
+        /// </summary>
+        /// <param name="src">音频源</param>
+        /// <param name="start">开始毫秒数</param>
+        /// <param name="end">结束毫秒数</param>
+        /// <param name="start_vol">始点音量比例</param>
+        /// <param name="end_vol">终点音量比例</param>
+        /// <returns></returns>
+        public BaseAudio audio_gradient(BaseAudio src, int start, int end, double start_vol = 1.00, double end_vol = 1.00)
+        {
+            int start_tick, end_tick;
+            if (!locate(src, start, end, out start_tick, out end_tick))
+                return src;
+
+            BaseAudio ret = new BaseAudio();
+            src.copy_to(ret);
+
+            for (int i = start_tick; i < end_tick; i++)
+            {
+                double rate1 = ((double)(i - start_tick)) / (end_tick - start_tick);
+                double rate2 = (1 - rate1) * start_vol + rate1 * end_vol;
+
+                ret.LVoice[i] *= (float)(rate2);
+                if (ret.RVoice != null)
+                    ret.RVoice[i] *= (float)(rate2);
+            }
+
+            return ret;
+        }
+        /// <summary>
+        /// 音频倒放，若出错将返回原音频
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后</para>
+        /// </summary>
+        /// <param name="src">音频源</param>
+        /// <param name="start">开始毫秒数</param>
+        /// <param name="end">结束毫秒数</param>
+        /// <returns></returns>
+        public BaseAudio audio_upending(BaseAudio src, int start, int end)
+        {
+            int start_tick, end_tick;
+            if (!locate(src, start, end, out start_tick, out end_tick))
+                return src;
+
+            BaseAudio ret = new BaseAudio();
+            src.copy_to(ret);
+
+            for (int i = start_tick; i < end_tick; i++)
+            {
+                ret.LVoice[i] = src.LVoice[end_tick - (i - start_tick + 1)];
+                if(ret.RVoice != null)
+                    ret.RVoice[i] = src.RVoice[end_tick - (i - start_tick + 1)];
+            }
+            return ret;
+        }
         #endregion
 
         #region PRIVATE_FUNCTION
-        private bool readWav(string filename, out float[] L, out float[] R,ref int sample_rate)
+
+        private bool readWav(string filename, out float[] L, out float[] R, ref int sample_rate)
         {
             L = R = null;
             //float [] left = new float[1];
@@ -295,6 +356,26 @@ namespace FaceMelody.SystemCore
                 return false;
                 //left = new float[ 1 ]{ 0f };
             }
+        }
+
+        private bool locate(BaseAudio src,int start,int end,out int start_tick,out int end_tick)
+        {
+            start_tick = 0;
+            end_tick = 0;
+            if (src.LVoice == null || src.LVoice.Count == 0 || src.SampleRate == 0 || start >= end || end <= 0)
+                return false;
+            int full_milisec = src.LVoice.Count * 1000 / src.SampleRate;
+            if (start <= 0)
+                start_tick = 0;
+            else if (start >= full_milisec)
+                return false;
+            else
+                start_tick = start * src.SampleRate / 1000;
+            if (end >= full_milisec)
+                end_tick = src.LVoice.Count;
+            else
+                end_tick = end * src.SampleRate / 1000;
+            return true;
         }
         #endregion
     }

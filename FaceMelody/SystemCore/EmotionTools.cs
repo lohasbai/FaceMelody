@@ -21,6 +21,9 @@ namespace FaceMelody.SystemCore
         #endregion
 
         #region STRUCT
+        /// <summary>
+        /// 这个结构体是上传视频时使用的，目前已基本放弃
+        /// </summary>
         public struct VideoEmotionResultPer100MiliSec
         {
             public List<Scores> scores;
@@ -63,7 +66,7 @@ namespace FaceMelody.SystemCore
             return img_last_emotions;
         }
         /// <summary>
-        /// 异步返回视频表情信息
+        /// 异步返回视频表情信息，目前已经基本放弃
         /// </summary>
         /// <param name="file"></param>
         /// <returns></returns>
