@@ -40,6 +40,16 @@ namespace FaceMelody.SystemCore
             /// 采样率
             /// </summary>
             public int SampleRate;
+            /// <summary>
+            /// 返回音频最大毫秒数，若无音频返回-1
+            /// </summary>
+            public long get_max_milisec
+            {
+                get
+                {
+                    return (LVoice == null || SampleRate == 0) ? (-1) : ((long)LVoice.Count * 1000 / SampleRate);
+                }
+            }
 
             /// <summary>
             /// 比特深度，勿改
@@ -58,7 +68,7 @@ namespace FaceMelody.SystemCore
             /// 完全复制
             /// </summary>
             /// <param name="dst">待复制到的目标</param>
-            public void copy_to(BaseAudio dst)
+            public void copy_to(ref BaseAudio dst)
             {
                 dst.clear();
                 dst.LVoice = new List<float>(this.LVoice.ToArray());
@@ -102,13 +112,16 @@ namespace FaceMelody.SystemCore
         /// <param name="audio">要写入的声音</param>
         /// <param name="file">包含文件名的完整路径</param>
         /// <returns></returns>
-        public bool audio_writer(BaseAudio audio, string file)
+        public bool audio_writer(BaseAudio audio, string file, string file_path = "")
         {
             try
             {
+                if (file_path != "")
+                    if(!Directory.Exists(file_path))
+                        Directory.CreateDirectory(file_path);
                 if (File.Exists(file))
                     File.Delete(file);
-                FileStream fs = new FileStream(file, FileMode.Create);
+                FileStream fs = new FileStream(file_path+"/"+file, FileMode.Create);
                 BinaryWriter bw = new BinaryWriter(fs);
                 bool double_wave = (audio.RVoice != null);
                 int bytes = ((double_wave) ? (2) : (1)) * audio.LVoice.Count * BaseAudio.BitDepth / 8;
@@ -131,8 +144,10 @@ namespace FaceMelody.SystemCore
 
                 if (double_wave)
                 {
-                    for (int i = 0; i < bytes / 2; i++)
+                    for (int i = 0; i < bytes / (2 * BaseAudio.BitDepth / 8); i++)
                     {
+                        if (i >= audio.LVoice.Count)
+                            break;
                         Int16 to_save = (Int16)(audio.LVoice[i] * Int16.MaxValue);
                         byte[] s1 = BitConverter.GetBytes(to_save);
                         bw.Write(s1);
@@ -143,8 +158,10 @@ namespace FaceMelody.SystemCore
                 }
                 else
                 {
-                    for (int i = 0; i < bytes; i++)
+                    for (int i = 0; i < bytes / (BaseAudio.BitDepth / 8); i++)
                     {
+                        if (i >= audio.LVoice.Count)
+                            break;
                         Int16 to_save = (Int16)(audio.LVoice[i] * Int16.MaxValue);
                         byte[] s1 = BitConverter.GetBytes(to_save);
                         bw.Write(s1);
@@ -154,6 +171,8 @@ namespace FaceMelody.SystemCore
                 fs.Flush();
                 bw.Close();
                 fs.Close();
+                bw.Dispose();
+                fs.Dispose();
                 return true;
             }
             catch
@@ -181,7 +200,7 @@ namespace FaceMelody.SystemCore
                 return new BaseAudio();
 
             BaseAudio ret = new BaseAudio();
-            src.copy_to(ret);
+            src.copy_to(ref ret);
 
             ret.LVoice.RemoveRange(sample_start, sample_end - sample_start);
             if(ret.RVoice != null)
@@ -208,16 +227,19 @@ namespace FaceMelody.SystemCore
                 return src;
 
             BaseAudio ret = new BaseAudio();
-            src.copy_to(ret);
+            src.copy_to(ref ret);
 
             for (int i = start_tick; i < end_tick; i++)
             {
                 double rate1 = ((double)(i - start_tick)) / (end_tick - start_tick);
                 double rate2 = (1 - rate1) * start_vol + rate1 * end_vol;
-
-                ret.LVoice[i] *= (float)(rate2);
+                float tmp = ret.LVoice[i] * (float)(rate2);
+                ret.LVoice[i] = (tmp >= 1) ? 1 : tmp;
                 if (ret.RVoice != null)
-                    ret.RVoice[i] *= (float)(rate2);
+                {
+                    tmp = ret.RVoice[i] * (float)(rate2);
+                    ret.RVoice[i] = (tmp >= 1) ? 1 : tmp;
+                }
             }
 
             return ret;
@@ -238,7 +260,7 @@ namespace FaceMelody.SystemCore
                 return src;
 
             BaseAudio ret = new BaseAudio();
-            src.copy_to(ret);
+            src.copy_to(ref ret);
 
             for (int i = start_tick; i < end_tick; i++)
             {
@@ -364,17 +386,17 @@ namespace FaceMelody.SystemCore
             end_tick = 0;
             if (src.LVoice == null || src.LVoice.Count == 0 || src.SampleRate == 0 || start >= end || end <= 0)
                 return false;
-            int full_milisec = src.LVoice.Count * 1000 / src.SampleRate;
+            long full_milisec = src.LVoice.Count * (long)1000 / src.SampleRate;
             if (start <= 0)
                 start_tick = 0;
             else if (start >= full_milisec)
                 return false;
             else
-                start_tick = start * src.SampleRate / 1000;
+                start_tick = (int)((long)start * src.SampleRate / 1000);
             if (end >= full_milisec)
                 end_tick = src.LVoice.Count;
             else
-                end_tick = end * src.SampleRate / 1000;
+                end_tick = (int)((long)end * src.SampleRate / 1000);
             return true;
         }
         #endregion
