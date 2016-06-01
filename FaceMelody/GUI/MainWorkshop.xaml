@@ -148,7 +148,16 @@
                    Foreground="White" FontSize="10"/>
             <Label Content="音轨 3" HorizontalAlignment="Left" Margin="40,115,0,0" VerticalAlignment="Top" 
                    Foreground="White" FontSize="10"/>
-            
+
+            <Canvas Name="VoiceTrack1_Canvas" 
+                    HorizontalAlignment="Left" Height="25" Width="870" Margin="80,55,0,0" 
+                    VerticalAlignment="Top" Background="Transparent" Grid.ColumnSpan="2"/>
+            <Canvas Name="VoiceTrack2_Canvas" 
+                    HorizontalAlignment="Left" Height="25" Width="870" Margin="80,85,0,0" 
+                    VerticalAlignment="Top" Background="Transparent" Grid.ColumnSpan="2"/>
+            <Canvas Name="VoiceTrack3_Canvas" 
+                    HorizontalAlignment="Left" Height="25" Width="870" Margin="80,115,0,0" 
+                    VerticalAlignment="Top" Background="Transparent" Grid.ColumnSpan="2"/>
             <Canvas Name="Timeline_Area_Canvas" MouseLeftButtonDown="Timeline_Area_Canvas_Click" 
                     MouseUp="Timeline_Area_Canvas_MouseUp"
                     HorizontalAlignment="Left" Height="120" Width="870" Margin="80,20,0,0" 

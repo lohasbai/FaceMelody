@@ -28,6 +28,9 @@ namespace FaceMelody
     public partial class MainWorkshop : Window
     {
         public double fullTimeLength;
+        public double videoHeight;
+        public double waveHeight;
+        public double waveWidth;
 
         public string[] materialList;
         public int materialNum;
@@ -53,6 +56,9 @@ namespace FaceMelody
             InitializeComponent();
 
             fullTimeLength = 15*8.7*1000;
+            videoHeight = 15;
+            waveHeight = 10;
+            waveWidth = 100.0/15.0/10.0;
 
             isPlay = false;
             videoLength = 0;
@@ -69,6 +75,7 @@ namespace FaceMelody
             isDelete = false;
 
             isDrawing = false;
+
         }
 
         #region Menu
@@ -141,18 +148,13 @@ namespace FaceMelody
 
             string path = materialList[Convert.ToInt16(sourceName.Substring(1, 1))];
 
+
             AudioTools audioTool = new AudioTools();
             AudioTools.BaseAudio baseAudio = audioTool.audio_reader(path);
 
-           /* FileStream fs = new FileStream("C:\\A.txt", FileMode.OpenOrCreate);
-            StreamWriter sw = new StreamWriter(fs, Encoding.Default);
-            for (int i = 0; ; i++)
-            {
-                sw.Write(baseAudio.LVoice.ToString());
-                sw.Close();
-            }
-            fs.Close();
-               // MessageBox.Show(baseAudio.LVoice.Count.ToString());*/
+            DrawWave(baseAudio.LVoice, baseAudio.SampleRate, 1);
+            DrawWave(baseAudio.LVoice, baseAudio.SampleRate, 3);
+
         }
         #endregion
 
@@ -389,7 +391,7 @@ namespace FaceMelody
 
             Rectangle videoArea = new Rectangle();
             videoArea.Width = width;
-            videoArea.Height = 15;
+            videoArea.Height = videoHeight;
             videoArea.SetValue(Canvas.LeftProperty, 0.0);
             videoArea.SetValue(Canvas.TopProperty, 10.0);
 
@@ -400,9 +402,74 @@ namespace FaceMelody
             Timeline_Area_Canvas.RegisterName("videoArea_Rectangle", videoArea);
         }
 
-        private void DrawWave()
+        private void DrawWave(List<float> originVoiceArray, int SampleRate, int trackIndex)
         {
+            // Calculate the parameters
+            int unitNum = Convert.ToInt16(originVoiceArray.Count / SampleRate * 10);
+            int unitArrayNum = Convert.ToInt16(SampleRate / 10);
 
+            // Calaulate the data of array for drawing
+            double[] waveHeightArray = new double[unitNum];
+            for (int i = 0; i < unitNum; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < unitArrayNum; j++)
+                {
+                    sum += originVoiceArray[i * unitArrayNum + j];
+                }
+                waveHeightArray[i] = sum / unitArrayNum;
+            }
+
+            // Remove previous wave
+            switch (trackIndex)
+            {
+                case 1:
+                    VoiceTrack1_Canvas.Children.Clear();
+                    break;
+                case 2:
+                    VoiceTrack2_Canvas.Children.Clear();
+                    break;
+                case 3:
+                    VoiceTrack3_Canvas.Children.Clear();
+                    break;
+            }
+
+            // Draw the wave
+            for (int i = 0; i < unitNum; i++)
+            {
+                Rectangle waveLine = new Rectangle();
+                waveLine.Width = waveWidth;
+
+                if (waveHeightArray[i] > 0)
+                {
+                    waveLine.Height = 1000 * waveHeight * waveHeightArray[i];
+                    waveLine.SetValue(Canvas.TopProperty, 12.5 - waveLine.Height);
+                }
+                else
+                {
+                    waveLine.Height = -waveHeight * waveHeightArray[i] * 1000;
+                    waveLine.SetValue(Canvas.TopProperty, 12.5);
+                }
+                waveLine.SetValue(Canvas.LeftProperty, Convert.ToDouble(waveWidth * i));
+                //MessageBox.Show((1000*waveHeightArray[i]).ToString());
+
+                BrushConverter brushConverter = new BrushConverter();
+                Brush myBrush = (Brush)brushConverter.ConvertFromString("#80F39C12");
+                waveLine.Fill = myBrush;
+
+                switch (trackIndex)
+                {
+                    case 1:
+                        VoiceTrack1_Canvas.Children.Insert(0, waveLine);
+                        break;
+                    case 2:
+                        VoiceTrack2_Canvas.Children.Insert(0, waveLine);
+                        break;
+                    case 3:
+                        VoiceTrack3_Canvas.Children.Insert(0, waveLine);
+                        break;
+                }
+            }
         }
         #endregion
 
