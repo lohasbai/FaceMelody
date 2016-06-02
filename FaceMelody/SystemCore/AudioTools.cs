@@ -175,8 +175,9 @@ namespace FaceMelody.SystemCore
                 fs.Dispose();
                 return true;
             }
-            catch
+            catch(Exception e)
             {
+                System.Windows.Forms.MessageBox.Show(e.Message);
                 return false;
             }
         }
@@ -208,7 +209,6 @@ namespace FaceMelody.SystemCore
 
             return ret;
         }
-
         /// <summary>
         /// 处理音频渐强渐弱，若出错将返回原音频
         /// <para>若start小于零则默认从0开始</para>
@@ -269,6 +269,70 @@ namespace FaceMelody.SystemCore
                     ret.RVoice[i] = src.RVoice[end_tick - (i - start_tick + 1)];
             }
             return ret;
+        }
+        /// <summary>
+        /// 音频回声效果，若出错将返回原音频
+        /// <para>若回声结尾超过音频总长将会被自动截取</para>
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后</para>
+        /// </summary>
+        /// <param name="src">音频源</param>
+        /// <param name="start">开始毫秒数</param>
+        /// <param name="end">结束毫秒数</param>
+        /// <param name="proportion">回声强度占比</param>
+        /// <returns></returns>
+        public BaseAudio audio_echoing(BaseAudio src, int start, int end, double proportion = 0.5)
+        {
+            int start_tick, end_tick;
+            if (!locate(src, start, end, out start_tick, out end_tick))
+                return src;
+
+            BaseAudio ret = new BaseAudio();
+            src.copy_to(ref ret);
+
+            int full_len = end_tick - start_tick;
+
+            for (int i = end_tick; i < Math.Min(src.LVoice.Count, end_tick + full_len); i++)
+            {
+                ret.LVoice[i] =
+                    src.LVoice[i] * (float)(1 - proportion) + src.LVoice[start + i] * (float)proportion;
+                if (ret.RVoice != null)
+                    ret.RVoice[i] =
+                        src.RVoice[i] * (float)(1 - proportion) + src.RVoice[start + i] * (float)proportion;
+            }
+            return ret;
+        }
+        /// <summary>
+        /// 交换声道效果，若出错将返回原音频
+        /// <para>若本来就是单声道的，则返回原音频</para>
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后</para>
+        /// </summary>
+        /// <param name="src">音频源</param>
+        /// <param name="start">开始毫秒数</param>
+        /// <param name="end">结束毫秒数</param>
+        /// <returns></returns>
+        public BaseAudio audio_exchanging(BaseAudio src, int start, int end)
+        {
+            int start_tick, end_tick;
+            if (!locate(src, start, end, out start_tick, out end_tick) || src.RVoice == null)
+                return src;
+
+            BaseAudio ret = new BaseAudio();
+            src.copy_to(ref ret);
+
+            int full_len = end_tick - start_tick;
+
+            ret.LVoice.RemoveRange(start_tick, full_len);
+            ret.LVoice.InsertRange(start_tick, src.RVoice.GetRange(start_tick, full_len));
+
+            ret.RVoice.RemoveRange(start_tick, full_len);
+            ret.RVoice.InsertRange(start_tick, src.LVoice.GetRange(start_tick, full_len));
+
+            for (int i = start_tick; i < end_tick; i++)
+            {
+                
+            }
         }
         #endregion
 
