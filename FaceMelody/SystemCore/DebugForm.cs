@@ -60,15 +60,23 @@ namespace FaceMelody
         EmotionTools.VideoEmotionResultPer100MiliSec last;
         EmotionTools et = new EmotionTools();
         TimeLineCore tlc = new TimeLineCore();
+        VideoTools vt;
         public DebugForm()
         {
             InitializeComponent();
         }
 
+        public void print(object sender, ProcessReportEventArgs e)
+        {
+            textBox1.Text += e.just_done + "\r\n";
+        }
+
         private async void button1_Click(object sender, EventArgs e)
         {
-            tlc.load_to_track("testwav.wav", 0);
-            textBox1.Text += "done1\r\n";
+            vt.debug();
+
+            //tlc.load_to_track("testwav.wav", 0);
+            //textBox1.Text += "done1\r\n";
             #region old
             //tlc.clear_all();
             //AudioTools at = new AudioTools();
@@ -134,6 +142,12 @@ namespace FaceMelody
         {
             tlc.clear_all();
             textBox1.Text += "done3\r\n";
+        }
+
+        private void DebugForm_Load(object sender, EventArgs e)
+        {
+            //vt = new VideoTools(
+            
         }
     }
 }
