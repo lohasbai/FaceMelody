@@ -59,7 +59,8 @@ namespace FaceMelody
 
         EmotionTools.VideoEmotionResultPer100MiliSec last;
         EmotionTools et = new EmotionTools();
-        TimeLineCore tlc = new TimeLineCore();
+        VideoTools.BaseVideo bv;
+        //TimeLineCore tlc = new TimeLineCore();
         VideoTools vt;
         public DebugForm()
         {
@@ -68,12 +69,16 @@ namespace FaceMelody
 
         public void print(object sender, ProcessReportEventArgs e)
         {
-            textBox1.Text += e.just_done + "\r\n";
+            textBox1.AppendText(e.percent.ToString() + "\r\n");
+            textBox1.AppendText(e.just_done + "\r\n");
+            textBox1.AppendText(e.to_do + "\r\n\r\n");
         }
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            vt.debug();
+            bv = await vt.video_reader("_no_sync_test_ver_2.mp4");
+            textBox1.AppendText("Finished");
+            //vt.debug();
 
             //tlc.load_to_track("testwav.wav", 0);
             //textBox1.Text += "done1\r\n";
@@ -131,23 +136,22 @@ namespace FaceMelody
 
         private void button2_Click(object sender, EventArgs e)
         {
-            List<double> var_list = new List<double>();
-            var_list.Add(0);
-            var_list.Add(4);
-            tlc.audio_function_center("gradient", 0, 10000, 20000, var_list);
-            textBox1.Text += "done2\r\n";
+            //List<double> var_list = new List<double>();
+            //var_list.Add(0);
+            //var_list.Add(4);
+            //tlc.audio_function_center("gradient", 0, 10000, 20000, var_list);
+            //textBox1.Text += "done2\r\n";
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            tlc.clear_all();
-            textBox1.Text += "done3\r\n";
+            //tlc.clear_all();
+            //textBox1.Text += "done3\r\n";
         }
 
         private void DebugForm_Load(object sender, EventArgs e)
         {
-            //vt = new VideoTools(
-            
+            vt = new VideoTools(print);
         }
     }
 }

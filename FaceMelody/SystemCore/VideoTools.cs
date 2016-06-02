@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
+using Microsoft.ProjectOxford.Emotion.Contract;
 
 namespace FaceMelody.SystemCore
 {
@@ -33,6 +34,11 @@ namespace FaceMelody.SystemCore
             /// </summary>
             public string file;
             /// <summary>
+            /// 每隔3秒的表情采样
+            /// <para>请注意：采样帧内允许有多个面部</para>
+            /// </summary>
+            public List<Emotion[]> emotion_per_3_sec;
+            /// <summary>
             /// 清空本段视频信息
             /// </summary>
             public void clear()
@@ -52,33 +58,27 @@ namespace FaceMelody.SystemCore
 
         /// <summary>
         /// 构造函数，传入回调函数
-        /// <para>以下是一个样例</para>
         /// </summary>
-        /// <example> 
-        /// This sample shows how to call the <see cref="GetZero"/> method.
         /// <code>
-        /// class TestClass 
+        /// public void print(object sender, ProcessReportEventArgs e)
         /// {
-        ///     static int Main() 
-        ///     {
-        ///         return GetZero();
-        ///     }
+        ///     textBox1.Text += e.just_done + "\r\n";
         /// }
         /// </code>
         /// </example>
-        /// <param name="back_function"></param>
+        /// <param name="back_function">回调函数，具体写法可参见本函数注释</param>
         public VideoTools(OnProcessCall back_function)
         {
             callback += back_function;
         }
 
-        public int debug(int c = 0)
-        {
-            ProcessReportEventArgs prea = new ProcessReportEventArgs();
-            prea.just_done = "abc";
-            callback(this, prea);
-            return 0;
-        }
+        //public int debug(int c = 0)
+        //{
+        //    ProcessReportEventArgs prea = new ProcessReportEventArgs();
+        //    prea.just_done = "abc";
+        //    callback(this, prea);
+        //    return 0;
+        //}
 
         /// <summary>
         /// 读取一个视频（推荐avi）
@@ -86,7 +86,7 @@ namespace FaceMelody.SystemCore
         /// </summary>
         /// <param name="file">包含文件名的完整路径</param>
         /// <returns></returns>
-        public BaseVideo video_reader(string file)
+        public async Task<BaseVideo> video_reader(string file)
         {
             BaseVideo ret = new BaseVideo();
             ret.clear();
@@ -96,23 +96,30 @@ namespace FaceMelody.SystemCore
                     throw new Exception("找不到视频文件");
                 if (!File.Exists("MyVideoReader.exe"))
                     throw new Exception("找到不到程序MyVideoReader.exe，请确保该可执行程序在主程序目录下");
+
+                fast_callback(0, "寻找相关文件", "分离视频与音频");
+
                 Process matlab_pro = new Process();
                 ProcessStartInfo start_info = new ProcessStartInfo("MyVideoReader.exe", file);
                 matlab_pro.StartInfo = start_info;
-                matlab_pro.Start();
-                int i = 0;
-                while (true)
+                await Task.Run(() =>
                 {
-                    System.Threading.Thread.Sleep(10);
-                    i++;
-                    if (i > TIME_OUT)
+                    matlab_pro.Start();
+                    int i = 0;
+                    while (true)
                     {
-                        matlab_pro.Kill();
-                        throw new Exception("程序运行超时");
+                        System.Threading.Thread.Sleep(10);
+                        i++;
+                        if (i > TIME_OUT)
+                        {
+                            matlab_pro.Kill();
+                            throw new Exception("程序运行超时");
+                        }
+                        if (matlab_pro.HasExited)
+                            break;
                     }
-                    if (matlab_pro.HasExited)
-                        break;
-                }
+                });
+                fast_callback(0.1, "分离视频与音频", "读取音频");
 
                 //读取分离的音频
                 string wav_file = "tmp_wavinfo_no_sync.wav";
@@ -122,13 +129,33 @@ namespace FaceMelody.SystemCore
                 ret.audio = at.audio_reader(wav_file);
                 File.Delete(wav_file);
 
-                //读取分离的帧
-                string video_sample_path = "frame_tmp_no_sync/";
-                string video_sample_file_tail = "_no_sync.jpg";
-                EmotionTools et = new EmotionTools();
-                //Task<Microsoft.ProjectOxford.Emotion.Contract.Emotion[]> a = et.get_emotion_from_image_file("123");
-                
+                fast_callback(0.15, "读取音频", "读取视频采样");
 
+                //读取分离的帧
+                string video_sample_path = "frame_tmp_no_sync";
+                string video_sample_file_tail = "_no_sync.jpg";
+                if(!Directory.Exists(video_sample_path))
+                    throw new Exception("找不到临时采样文件夹");
+                DirectoryInfo info = new DirectoryInfo(video_sample_path);
+                int sample_num = info.GetFiles().Length;
+
+                EmotionTools et = new EmotionTools();
+                ret.emotion_per_3_sec = new List<Emotion[]>();
+                for (int i = 0; i < sample_num; i++)
+                {
+                    fast_callback((1 - 0.15) / sample_num * i + 0.15,
+                        ((i == 0) ? ("读取视频采样") : ("处理第" + i.ToString() + "个采样")),
+                        "处理第" + (i + 1).ToString() + "个采样");
+                    Emotion[] tmp_emotions = await
+                        et.get_emotion_from_image_file(video_sample_path +"/"+ i.ToString() + video_sample_file_tail);
+                    ret.emotion_per_3_sec.Add(tmp_emotions);
+                    await Task.Delay(3500);
+                }
+
+                fast_callback(1, "处理第" + (sample_num - 1).ToString() + "个采样", "返回处理结果，删除临时文件");
+
+                if (Directory.Exists(video_sample_path))
+                    Directory.Delete(video_sample_path, true);
                 ret.file = file;
             }
             catch(Exception e)
@@ -138,6 +165,20 @@ namespace FaceMelody.SystemCore
             }
             return ret;
         }
+
+        #endregion
+
+        #region PRIVATE_FUNCTION
+
+        private void fast_callback(double per,string done,string todo)
+        {
+            ProcessReportEventArgs new_args = new ProcessReportEventArgs();
+            new_args.percent = per;
+            new_args.just_done = done;
+            new_args.to_do = todo;
+            callback(this, new_args);
+        }
+
         #endregion
     }
 
@@ -146,7 +187,7 @@ namespace FaceMelody.SystemCore
         /// <summary>
         /// 进度，0-1
         /// </summary>
-        public double progress;
+        public double percent;
         /// <summary>
         /// 刚刚做完的事情
         /// </summary>
