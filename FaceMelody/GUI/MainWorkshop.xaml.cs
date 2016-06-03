@@ -27,15 +27,27 @@ namespace FaceMelody
     /// </summary>
     public partial class MainWorkshop : Window
     {
+        private TimeLineCore timeLine;
+
         public double fullTimeLength;
         public double videoHeight;
         public double waveHeight;
         public double waveWidth;
 
-        public string[] materialList;
+        public string[] materialNameList;
         public int materialNum;
+        public int[] trackIndexList;
+        public int curAddTrack;
+        public int curEditTrack;
 
         public double videoLength;
+        public double maxVideoHeight;
+        public double maxVideoWidth;
+        public double originVideoHeight;
+        public double originVideoWidth;
+        public double actualVideoHeight;
+        public double actualVideoWidth;
+        public System.Timers.Timer drawTimer;
 
         public double curX;
 
@@ -45,15 +57,19 @@ namespace FaceMelody
         public bool isDelete;
 
         public bool isPlay;
+        public bool isVideoRead;
 
         public bool isDrawing;
         public double startX;
         public double endX;
+        public double startY;
 
-
+        #region System
         public MainWorkshop()
         {
             InitializeComponent();
+
+            timeLine = new TimeLineCore(ProcessReport);
 
             fullTimeLength = 15*8.7*1000;
             videoHeight = 15;
@@ -61,10 +77,20 @@ namespace FaceMelody
             waveWidth = 100.0/15.0/10.0;
 
             isPlay = false;
+            isVideoRead = false;
             videoLength = 0;
+            maxVideoHeight = 353;
+            maxVideoWidth = 576;
+            originVideoHeight = 0;
+            originVideoWidth = 0;
+            actualVideoHeight = 0;
+            actualVideoWidth = 0;
 
-            materialList = new string[15];
+            materialNameList = new string[15];
             materialNum = 0;
+            trackIndexList = new int[3] { 0, 0, 0 };
+            curAddTrack = 0;
+            curEditTrack = 0;
 
             curX = 0;
             DrawSelectBar();
@@ -75,26 +101,42 @@ namespace FaceMelody
             isDelete = false;
 
             isDrawing = false;
-
         }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            timeLine.clear_all();
+        }
+        #endregion
 
         #region Menu
 
-        private void OpenFile_Menu_Click(object sender, RoutedEventArgs e)
+        private async void OpenFile_Menu_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
 
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 string filePath = openFileDialog.FileName;
+
                 if (filePath != "" || filePath != null)
                 {
                     this.VideoPlayer.Source = new Uri(filePath);
-
                     this.VideoPlayer.Position = TimeSpan.FromMilliseconds(100);
                     this.VideoPlayer.Play();
                     Thread.Sleep(50);
                     this.VideoPlayer.Pause();
+
+                    isVideoRead = await timeLine.load_to_video_track(filePath);
+
+                    if (isVideoRead)
+                    {
+                        MessageBox.Show("视频读取成功");
+                    }
+                    else
+                    {
+                        MessageBox.Show("视频读取失败");
+                    }
                 }
             }
         }
@@ -128,13 +170,15 @@ namespace FaceMelody
                 Content = fileName,
                 FontSize = 10,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Background = new SolidColorBrush(Color.FromArgb(255, 34, 33, 37)),
+                Background = new SolidColorBrush(Color.FromArgb(100, 34, 33, 37)),
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0, 255, 255, 255)),
+                BorderThickness = new Thickness(1),
                 Height = 50,
                 Width = 192,
             };
 
-            materialList[materialNum] = filePath;
+            materialNameList[materialNum] = filePath;
             materialNum++;
 
             List_Label.MouseDown += new MouseButtonEventHandler(ChooseMaterial_Click);
@@ -145,16 +189,22 @@ namespace FaceMelody
         {
             Label List_Label = sender as Label;
             string sourceName = List_Label.Name;
+            int curMaterial = Convert.ToInt16(sourceName.Substring(1, 1));
 
-            string path = materialList[Convert.ToInt16(sourceName.Substring(1, 1))];
+            string path = materialNameList[curMaterial];
 
+            curAddTrack++;
 
-            AudioTools audioTool = new AudioTools();
-            AudioTools.BaseAudio baseAudio = audioTool.audio_reader(path);
+            if (curAddTrack == 4)
+            {
+                curAddTrack = 1;
+            }
 
-            DrawWave(baseAudio.LVoice, baseAudio.SampleRate, 1);
-            DrawWave(baseAudio.LVoice, baseAudio.SampleRate, 3);
+            timeLine.load_to_audio_track(path, curAddTrack-1);
+            trackIndexList[curAddTrack-1] = curMaterial;
 
+            DrawWave(timeLine.audio_track[curAddTrack - 1].LVoice, timeLine.audio_track[curAddTrack - 1].SampleRate, curAddTrack);
+            //MessageBox.Show(materialNameList[trackIndexList[curAddTrack - 1]]);
         }
         #endregion
 
@@ -163,6 +213,8 @@ namespace FaceMelody
         private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e)
         {
             videoLength = VideoPlayer.NaturalDuration.TimeSpan.TotalMilliseconds;
+            originVideoHeight = VideoPlayer.NaturalVideoHeight;
+            originVideoWidth = VideoPlayer.NaturalVideoWidth;
             //MessageBox.Show(videoLength.ToString());
             DrawVideoArea();
         }
@@ -184,6 +236,13 @@ namespace FaceMelody
                 isPlay = true;
                 this.VideoPlayer.Play();
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Pause_Icon.png", UriKind.Relative));
+
+                if (isVideoRead)
+                {
+                    //drawTimer = new System.Timers.Timer(3000);
+                    //drawTimer.Elapsed += new System.Timers.ElapsedEventHandler(DisplayInformation);
+                    //DisplayInformation(6000);
+                }
             }
             else
             {
@@ -201,6 +260,78 @@ namespace FaceMelody
             Thread.Sleep(50);
             this.VideoPlayer.Pause();
         }
+
+        private void DisplayInformation(double curVideoTime)
+        {
+            int emotionIndex = Convert.ToInt16(Math.Floor((curVideoTime/1000)/3));
+            int maxEmotionIndex = Convert.ToInt16(Math.Floor((videoLength / 1000) / 3));
+
+            if (emotionIndex > maxEmotionIndex - 1)
+            {
+                emotionIndex = maxEmotionIndex;
+            }
+
+            if (timeLine.video_track.emotion_per_3_sec[emotionIndex]!= null)
+            {
+                int faceNum = 1;
+
+                // Clear ratangles
+                DrawRectangle_Canvas.Children.Clear();
+
+                for (int i = 0; i < faceNum; i++)
+                {
+                    // Get parameters for rectangles
+                    int originFrameHeight = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Height;
+                    int originFrameWidth = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Width;
+                    int originFrameLeft = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Left;
+                    int originFrameTop = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Top;
+
+                    // Get parameters for positions
+                    double zoomRatio = 0;
+                    if (originVideoHeight / originVideoWidth > maxVideoHeight / maxVideoWidth)
+                    {
+                        zoomRatio = maxVideoHeight / originVideoHeight;
+                    }
+                    else
+                    {
+                        zoomRatio = maxVideoWidth / originVideoWidth;
+                    }
+                    actualVideoHeight = zoomRatio * originVideoHeight;
+                    actualVideoWidth = zoomRatio * originVideoWidth;
+                    double actualFrameHeight = zoomRatio * originFrameHeight;
+                    double actualFrameWidth = zoomRatio * originFrameWidth;
+                    double actualFrameLeft = (maxVideoWidth - actualVideoWidth) / 2 + zoomRatio * originFrameLeft;
+                    double actualFrameTop = (maxVideoHeight - actualVideoHeight) / 2 + zoomRatio * originFrameTop;
+
+                   // MessageBox.Show(actualVideoHeight.ToString() + ", " + actualVideoWidth.ToString());
+
+                    //Draw rectangle
+                    Rectangle faceFrame = new Rectangle();
+                    faceFrame.Width = actualFrameHeight;
+                    faceFrame.Height = actualFrameWidth;
+                    faceFrame.SetValue(Canvas.LeftProperty, actualFrameLeft);
+                    faceFrame.SetValue(Canvas.TopProperty, actualFrameTop);
+                    BrushConverter brushConverter = new BrushConverter();
+                    Brush myBrush = (Brush)brushConverter.ConvertFromString("#40FFFFFF");
+                    faceFrame.Fill = myBrush;
+                    DrawRectangle_Canvas.Children.Insert(0, faceFrame);
+
+                    MessageBox.Show("zoomRatio: " + zoomRatio.ToString() +
+                                    " height: " + actualFrameHeight.ToString() +
+                                    " width: " + actualFrameWidth.ToString() +
+                                    " leftOffset: " + actualFrameLeft.ToString() +
+                                    " topOffset: " + actualFrameTop.ToString());
+
+                    // Display the information
+
+
+                }
+
+                
+
+            }
+        }
+
         #endregion
 
         #region Information
@@ -223,6 +354,7 @@ namespace FaceMelody
                 Select_Image.Source = new BitmapImage(new Uri(@".\Icon\SelectOff_Icon.png", UriKind.Relative));
             }
         }
+
         private void Area_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (!isArea)
@@ -293,6 +425,11 @@ namespace FaceMelody
                 this.VideoPlayer.Pause();
                 isPlay = false;
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Play_Icon.png", UriKind.Relative));
+                // Add face frames
+                if (isVideoRead)
+                {
+                    DisplayInformation(curTime);
+                }
             }
             if (isArea)
             {
@@ -300,6 +437,7 @@ namespace FaceMelody
                 Point startPoint = e.GetPosition(this.Timeline_Area_Canvas);
                 isDrawing = true;
                 startX = startPoint.X;
+                startY = startPoint.Y;
                 endX = startX;
             }
         }
@@ -342,7 +480,7 @@ namespace FaceMelody
 
         private void DrawChoiceArea()
         {
-            //Delete previous preSelectBar
+            // Remove previous preSelectBar
             Rectangle preChoiceArea = Timeline_Area_Canvas.FindName("choiceArea_Rectangle") as Rectangle;
             if (preChoiceArea != null)
             {
@@ -350,16 +488,33 @@ namespace FaceMelody
                 Timeline_Area_Canvas.UnregisterName("choiceArea_Rectangle");
             }
 
-            //Draw new video area
+            // Draw new video area
             double width = endX - startX;
             if (width < 0)
             {
                 width = -width;
             }
 
+            double topY;
+            if (startY < 62.5)
+            {
+                topY = 37.5;
+                curEditTrack = 1;
+            }
+            else if (startY >= 62.5 && startY < 92.5)
+            {
+                topY = 67.5;
+                curEditTrack = 2;
+            }
+            else
+            {
+                topY = 97.5;
+                curEditTrack = 3;
+            }
+
             Rectangle choiceArea = new Rectangle();
             choiceArea.Width = width;
-            choiceArea.Height = 110;
+            choiceArea.Height = 20;
             if (endX - startX > 0)
             {
                 choiceArea.SetValue(Canvas.LeftProperty, startX);
@@ -368,7 +523,8 @@ namespace FaceMelody
             {
                 choiceArea.SetValue(Canvas.LeftProperty, endX);
             }
-            choiceArea.SetValue(Canvas.BottomProperty, 5.0);
+
+            choiceArea.SetValue(Canvas.TopProperty, topY);
             BrushConverter brushConverter = new BrushConverter();
             Brush myBrush = (Brush)brushConverter.ConvertFromString("#4027AE60");
             choiceArea.Fill = myBrush;
@@ -378,7 +534,7 @@ namespace FaceMelody
 
         private void DrawVideoArea()
         {
-            //Delete previous preSelectBar
+            // Delete previous preSelectBar
             Rectangle preVideoArea = Timeline_Area_Canvas.FindName("videoArea_Rectangle") as Rectangle;
             if (preVideoArea != null)
             {
@@ -386,7 +542,7 @@ namespace FaceMelody
                 Timeline_Area_Canvas.UnregisterName("videoArea_Rectangle");
             }
 
-            //Draw new video area
+            // Draw new video area
             double width = videoLength/fullTimeLength*870;
 
             Rectangle videoArea = new Rectangle();
@@ -473,7 +629,81 @@ namespace FaceMelody
         }
         #endregion
 
+        #region Effects
+        private void Weaken_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
 
+        }
+
+        private void Strengthen_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void Rewind_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void Echo_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void Filter_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void SoundTrack_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void ChangeTune_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+        #endregion
+
+        #region Process
+        public void ProcessReport(object sender, ProcessReportEventArgs e)
+        {
+            // Display the current event
+            ToDo_Label.Content = e.to_do;
+
+            // Display the percentage
+            int processInt = Convert.ToInt16(e.percent*100);
+            Precess_Label.Content = processInt.ToString()+"%";
+            if (processInt == 100)
+            {
+                ToDo_Label.Content = "完毕";
+            }
+
+            // Draw the process bar
+            double width = e.percent * 250;
+            Rectangle preProcessBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
+            if (preProcessBar == null)
+            {
+                Rectangle processBar = new Rectangle();
+                processBar.Width = width;
+                processBar.Height = 15;
+                processBar.SetValue(Canvas.LeftProperty, 0.0);
+                processBar.SetValue(Canvas.TopProperty, 0.0);
+
+                BrushConverter brushConverter = new BrushConverter();
+                Brush myBrush = (Brush)brushConverter.ConvertFromString("#802980B9");
+                processBar.Fill = myBrush;
+                Process_Canvas.Children.Insert(0, processBar);
+                Process_Canvas.RegisterName("process_Rectangle", processBar);
+            }
+            else
+            {
+                Rectangle processBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
+                processBar.Width = width;
+            }
+        }
+        #endregion
 
     }
 }
