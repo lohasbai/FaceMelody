@@ -230,7 +230,7 @@ namespace FaceMelody.SystemCore
             List<int> sample_end = new List<int>();
 
             int src_0_sample_start, src_0_sample_end;
-            if(!locate(src[0],start,end,out src_0_sample_start,out src_0_sample_end)
+            if (!locate(src[0], start, end, out src_0_sample_start, out src_0_sample_end))
                 return ret;
 
             sample_start.Add(src_0_sample_start);
