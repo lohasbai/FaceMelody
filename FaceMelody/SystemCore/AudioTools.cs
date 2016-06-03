@@ -383,6 +383,38 @@ namespace FaceMelody.SystemCore
             return ret;
         }
         /// <summary>
+        /// 插入音频段，目前仅支持相同的SampleRate和声道数，若出错将返回原音频
+        /// </summary>
+        /// <param name="src">将增加插入的音频</param>
+        /// <param name="src2">将插入至src的音频</param>
+        /// <param name="start">对应src的插入点（毫秒数）若大于最大值则默认为最大值</param>
+        /// <returns></returns>
+        public BaseAudio audio_inserter(BaseAudio src, BaseAudio src2, int start)
+        {
+            if (src.is_empty || start < 0 || src2.is_empty || src.SampleRate != src2.SampleRate)
+                return src;
+            if(src.RVoice == null && src2.RVoice != null)
+                return src;
+            if(src.RVoice != null && src2.RVoice == null)
+                return src;
+
+            BaseAudio ret = new BaseAudio();
+            src.copy_to(ref ret);
+
+            int insert_point = 0;
+
+            if (start >= (int)src.max_milisec)
+                insert_point = src.LVoice.Count;
+            else
+                insert_point = (int)((long)start * src.SampleRate / 1000);
+
+            ret.LVoice.InsertRange(insert_point, src2.LVoice.ToArray());
+            if (ret.RVoice != null)
+                ret.RVoice.InsertRange(insert_point, src2.RVoice.ToArray());
+
+            return ret;
+        }
+        /// <summary>
         /// 处理音频渐强渐弱，若出错将返回原音频
         /// <para>若start小于零则默认从0开始</para>
         /// <para>若end大于最大毫秒数将截取到最后</para>
