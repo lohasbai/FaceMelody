@@ -76,13 +76,29 @@ namespace FaceMelody
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            bv = await vt.video_reader("_no_sync_test_ver_2.mp4");
-            textBox1.AppendText("Finished");
+            AudioTools at = new AudioTools();
+            AudioTools.BaseAudio b1 = at.audio_reader("testwav2.wav");
+            AudioTools.BaseAudio b2 = at.audio_reader("testwav.wav");
+            List<AudioTools.BaseAudio> b_list = new List<AudioTools.BaseAudio>();
+            b_list.Add(b1); b_list.Add(b2);
+            List<double> d_list = new List<double>();
+            d_list.Add(0.5); d_list.Add(0.5);
+            AudioTools.BaseAudio ans = at.audio_mixer(b_list, 0, 30000, d_list);
+            at.audio_writer(ans, "ans.wav");
+
+            #region old
+            //AudioTools at = new AudioTools();
+            //AudioTools.BaseAudio b1 = at.audio_reader(
+
+            //bv = await vt.video_reader("_no_sync_test_ver_2.mp4",true);
+            //textBox1.AppendText("Finished");
+            //AudioTools at = new AudioTools();
+            //at.audio_writer(bv.audio, "testwav2.wav");
             //vt.debug();
 
             //tlc.load_to_track("testwav.wav", 0);
             //textBox1.Text += "done1\r\n";
-            #region old
+
             //tlc.clear_all();
             //AudioTools at = new AudioTools();
             //AudioTools.BaseAudio ba = at.audio_reader("testwav.wav");

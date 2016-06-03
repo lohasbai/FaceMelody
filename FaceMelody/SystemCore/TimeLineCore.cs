@@ -95,13 +95,13 @@ namespace FaceMelody.SystemCore
         /// </summary>
         /// <param name="file"></param>
         /// <returns></returns>
-        public async Task<bool> load_to_video_track(string file)
+        public async Task<bool> load_to_video_track(string file, bool skip_emotion = false)
         {
             try
             {
                 if (!File.Exists(file))
                     throw new Exception("文件不存在");
-                video_track = await video_tools.video_reader(file);
+                video_track = await video_tools.video_reader(file,skip_emotion);
             }
             catch (Exception e)
             {

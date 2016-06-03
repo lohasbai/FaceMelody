@@ -135,7 +135,7 @@ namespace FaceMelody.SystemCore
         }
 
         /// <summary>
-        /// 将BaseSound写入wav文件
+        /// 将BaseAudio写入wav文件
         /// </summary>
         /// <param name="audio">要写入的声音</param>
         /// <param name="file">包含文件名的完整路径</param>
@@ -145,11 +145,15 @@ namespace FaceMelody.SystemCore
             try
             {
                 if (file_path != "")
-                    if(!Directory.Exists(file_path))
+                    if (!Directory.Exists(file_path))
                         Directory.CreateDirectory(file_path);
                 if (File.Exists(file))
                     File.Delete(file);
-                FileStream fs = new FileStream(file_path+"/"+file, FileMode.Create);
+                FileStream fs;
+                if (file_path != "")
+                    fs = new FileStream(file_path + "/" + file, FileMode.Create);
+                else
+                    fs = new FileStream(file, FileMode.Create);
                 BinaryWriter bw = new BinaryWriter(fs);
                 bool double_wave = (audio.RVoice != null);
                 int bytes = ((double_wave) ? (2) : (1)) * audio.LVoice.Count * BaseAudio.BitDepth / 8;
@@ -203,7 +207,7 @@ namespace FaceMelody.SystemCore
                 fs.Dispose();
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 System.Windows.Forms.MessageBox.Show(e.Message);
                 return false;
@@ -214,6 +218,9 @@ namespace FaceMelody.SystemCore
         /// <para>若start小于零则默认从0开始</para>
         /// <para>若end大于最大毫秒数将截取到最后，超出部分补0</para>
         /// <para>SampleRate将和第一条音轨一致</para>
+        /// <para>（本条有待修正）特别的，若第一条音轨不是最长</para>
+        /// <para>的且混音区间超过了第一条音轨的长度超出部分将</para>
+        /// <para>【不会】被混入</para>
         /// </summary>
         /// <param name="src">音频列表</param>
         /// <param name="start">开始混合的毫秒数</param>
@@ -225,29 +232,58 @@ namespace FaceMelody.SystemCore
             BaseAudio ret = new BaseAudio();
             if (src.Count != proportions.Count || src.Count < 1 || Math.Abs(proportions.Sum() - 1) > PRECISION)
                 return ret;
-
-            List<int> sample_start = new List<int>();
-            List<int> sample_end = new List<int>();
-
-            int src_0_sample_start, src_0_sample_end;
-            if (!locate(src[0], start, end, out src_0_sample_start, out src_0_sample_end))
-                return ret;
-
-            sample_start.Add(src_0_sample_start);
-            sample_end.Add(src_0_sample_end);
-
-            List<int> tmp_copy_list = new List<int>();
-            tmp_copy_list.Add(src_0_sample_start);
-            tmp_copy_list.Add(src_0_sample_end);
-
-            src[0].copy_to(ref ret,tmp_copy_list);
-
-            for (int i = 0; i < src.Count; i++)
+            
+            
+            if (end < src[0].max_milisec)
+            //第一类情况，处理区间包含在第一条音轨内
             {
-                int tmp_sample_start, tmp_sample_end;
-            }
+                int src_0_sample_start, src_0_sample_end;
+                if (!locate(src[0], start, end, out src_0_sample_start, out src_0_sample_end))
+                    return ret;
+                List<int> tmp_copy_list = new List<int>();
+                tmp_copy_list.Add(src_0_sample_start);
+                tmp_copy_list.Add(src_0_sample_end);
+                src[0].copy_to(ref ret, tmp_copy_list);
 
+                for (int i = 0; i < ret.LVoice.Count; i++)
+                {
+                    {
+                        List<float> to_average = new List<float>();
+                        to_average.Add(ret.LVoice[i]);
+                        for (int j = 1; j < src.Count; j++)
+                        {
+                            int src_j_sample_locate =
+                                (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
+                            if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].LVoice.Count)
+                                to_average.Add(src[j].LVoice[src_j_sample_locate]);
+                        }
+                        ret.LVoice[i] = (to_average.Sum()) / to_average.Count;
+                    }
+                    if (ret.RVoice != null)
+                    {
+                        List<float> to_average = new List<float>();
+                        to_average.Add(ret.RVoice[i]);
+                        for (int j = 1; j < src.Count; j++)
+                        {
+                            if (src[j].RVoice != null)
+                            {
+                                int src_j_sample_locate =
+                                    (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
+                                if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].RVoice.Count)
+                                    to_average.Add(src[j].RVoice[src_j_sample_locate]);
+                            }
+                        }
+                        ret.RVoice[i] = (to_average.Sum()) / to_average.Count;
+                    }
+                }
                 return ret;
+            }
+            else
+            //第二类情况，处理区间不在第一条音轨内
+            {
+                ret.SampleRate = src[0].SampleRate;
+                return ret;
+            }
         }
         /// <summary>
         /// 将音频减去一段，若出错将返回原音频
