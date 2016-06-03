@@ -20,6 +20,7 @@ namespace FaceMelody.SystemCore
         private const Int16 _fmtCode = 1;
         private const Int16 _fmtBlockAlign = 4;
         private const float PRECISION = 0.0001f;
+        private const int DEFAULT_SAMPLERATE_OUTPUT = 44100;
         #endregion
 
         #region BASE_STRUCT
@@ -217,7 +218,7 @@ namespace FaceMelody.SystemCore
         /// 混合音频，若出错将返回空音频
         /// <para>若start小于零则默认从0开始</para>
         /// <para>若end大于最大毫秒数将截取到最后，超出部分补0</para>
-        /// <para>SampleRate将和第一条音轨一致</para>
+        /// <para>SampleRate将为DEFAULT_SAMPLERATE_OUTPUT</para>
         /// <para>（本条有待修正）特别的，若第一条音轨不是最长</para>
         /// <para>的且混音区间超过了第一条音轨的长度超出部分将</para>
         /// <para>【不会】被混入</para>
@@ -227,63 +228,132 @@ namespace FaceMelody.SystemCore
         /// <param name="end">结束混合的毫秒数</param>
         /// <param name="proportions">各成分占比，请确保其和为1</param>
         /// <returns></returns>
-        public BaseAudio audio_mixer(List<BaseAudio> src, int start, int end, List<double> proportions)
+        public BaseAudio audio_mixer(List<BaseAudio> src, int start, int end)
         {
             BaseAudio ret = new BaseAudio();
-            if (src.Count != proportions.Count || src.Count < 1 || Math.Abs(proportions.Sum() - 1) > PRECISION)
+            if (src.Count < 1)
                 return ret;
-            
-            
-            if (end < src[0].max_milisec)
-            //第一类情况，处理区间包含在第一条音轨内
-            {
-                int src_0_sample_start, src_0_sample_end;
-                if (!locate(src[0], start, end, out src_0_sample_start, out src_0_sample_end))
-                    return ret;
-                List<int> tmp_copy_list = new List<int>();
-                tmp_copy_list.Add(src_0_sample_start);
-                tmp_copy_list.Add(src_0_sample_end);
-                src[0].copy_to(ref ret, tmp_copy_list);
 
-                for (int i = 0; i < ret.LVoice.Count; i++)
+            //for (int i = 0; i < src.Count; i++)
+            //    if (src[i].is_empty)
+            //        return ret;
+
+            #region old_version
+            //if (end < src[0].max_milisec)
+            ////第一类情况，处理区间包含在第一条音轨内
+            //{
+            //    int src_0_sample_start, src_0_sample_end;
+            //    if (!locate(src[0], start, end, out src_0_sample_start, out src_0_sample_end))
+            //        return ret;
+            //    List<int> tmp_copy_list = new List<int>();
+            //    tmp_copy_list.Add(src_0_sample_start);
+            //    tmp_copy_list.Add(src_0_sample_end);
+            //    src[0].copy_to(ref ret, tmp_copy_list);
+            //    bool try_right = true;
+            //    ret.RVoice = new List<float>();
+            //    for (int i = 0; i < ret.LVoice.Count; i++)
+            //    {
+            //        {
+            //            List<float> to_average = new List<float>();
+            //            to_average.Add(ret.LVoice[i]);
+            //            for (int j = 1; j < src.Count; j++)
+            //            {
+            //                int src_j_sample_locate =
+            //                    (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
+            //                if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].LVoice.Count)
+            //                    to_average.Add(src[j].LVoice[src_j_sample_locate]);
+            //            }
+            //            ret.LVoice[i] = (to_average.Sum()) / to_average.Count;
+            //        }
+            //        if(try_right)
+            //        {
+            //            List<float> to_average = new List<float>();
+            //            for (int j = 0; j < src.Count; j++)
+            //            {
+            //                if (src[j].RVoice != null)
+            //                {
+            //                    int src_j_sample_locate =
+            //                        (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
+            //                    if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].RVoice.Count)
+            //                        to_average.Add(src[j].RVoice[src_j_sample_locate]);
+            //                }
+            //            }
+            //            if (to_average.Count != 0)
+            //            {
+            //                ret.RVoice.Add((to_average.Sum()) / to_average.Count);
+            //            }
+            //            else if (i == 0)
+            //            {
+            //                ret.RVoice = null;
+            //                try_right = false;
+            //            }
+            //            else
+            //            {
+            //                try_right = false;
+            //            }
+            //        }
+            //    }
+            //    return ret;
+            //}
+            //else
+            ////第二类情况，处理区间不在第一条音轨内
+            #endregion
+
+            ret.SampleRate = DEFAULT_SAMPLERATE_OUTPUT;
+            ret.LVoice = new List<float>();
+            ret.RVoice = new List<float>();
+            int start_sample = (int)((long)start * ret.SampleRate / 1000);
+            int end_sample = (int)((long)end * ret.SampleRate / 1000);
+            bool try_right = true;
+            for (int i = start_sample; i < end_sample; i++)
+            {
                 {
+                    List<float> to_average = new List<float>();
+                    for (int j = 0; j < src.Count; j++)
                     {
-                        List<float> to_average = new List<float>();
-                        to_average.Add(ret.LVoice[i]);
-                        for (int j = 1; j < src.Count; j++)
+                        if (src[j].LVoice != null)
                         {
                             int src_j_sample_locate =
-                                (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
+                                (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * i);
                             if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].LVoice.Count)
                                 to_average.Add(src[j].LVoice[src_j_sample_locate]);
                         }
-                        ret.LVoice[i] = (to_average.Sum()) / to_average.Count;
                     }
-                    if (ret.RVoice != null)
+                    if (to_average.Count == 0)
+                        break;
+                    ret.LVoice.Add((to_average.Sum()) / to_average.Count);
+                }
+                if (try_right)
+                {
+                    List<float> to_average = new List<float>();
+                    for (int j = 0; j < src.Count; j++)
                     {
-                        List<float> to_average = new List<float>();
-                        to_average.Add(ret.RVoice[i]);
-                        for (int j = 1; j < src.Count; j++)
+                        if (src[j].RVoice != null)
                         {
-                            if (src[j].RVoice != null)
-                            {
-                                int src_j_sample_locate =
-                                    (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * (i + src_0_sample_start));
-                                if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].RVoice.Count)
-                                    to_average.Add(src[j].RVoice[src_j_sample_locate]);
-                            }
+                            int src_j_sample_locate =
+                                (int)Math.Round(((double)(src[j].SampleRate)) / ret.SampleRate * i);
+                            if (src_j_sample_locate >= 0 && src_j_sample_locate < src[j].RVoice.Count)
+                                to_average.Add(src[j].RVoice[src_j_sample_locate]);
                         }
-                        ret.RVoice[i] = (to_average.Sum()) / to_average.Count;
+                    }
+                    if (to_average.Count != 0)
+                    {
+                        ret.RVoice.Add((to_average.Sum()) / to_average.Count);
+                    }
+                    else if (i == start_sample)
+                    {
+                        ret.RVoice = null;
+                        try_right = false;
+                    }
+                    else
+                    {
+                        try_right = false;
                     }
                 }
-                return ret;
             }
-            else
-            //第二类情况，处理区间不在第一条音轨内
-            {
-                ret.SampleRate = src[0].SampleRate;
-                return ret;
-            }
+            if (ret.LVoice.Count == 0)
+                ret.clear();
+            return ret;
         }
         /// <summary>
         /// 将音频减去一段，若出错将返回原音频

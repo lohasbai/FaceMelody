@@ -20,6 +20,21 @@ namespace FaceMelody.SystemCore
         /// </summary>
         public AudioTools.BaseAudio[] audio_track = new AudioTools.BaseAudio[MAX_AUDIO_TRACK];
         /// <summary>
+        /// 混合音轨的音频
+        /// <para>请注意：每次尝试获得此值将会立即渲染混合音轨！</para>
+        /// <para>若无音轨渲染，返回空音频</para>
+        /// </summary>
+        public AudioTools.BaseAudio mix_audio_track
+        {
+            get
+            {
+                long max_mili_sec = max_audio_track_sec();
+                if (max_mili_sec == -1)
+                    return new AudioTools.BaseAudio();
+                return audio_tools.audio_mixer(new List<AudioTools.BaseAudio>(audio_track), 0, (int)max_mili_sec);
+            }
+        }
+        /// <summary>
         /// 音频临时文件的文件名
         /// </summary>
         public string[] audio_tmp_file_name = new string[MAX_AUDIO_TRACK];
@@ -56,12 +71,7 @@ namespace FaceMelody.SystemCore
             {
                 audio_tmp_file_name[i] = "_audio_tmp_" + i.ToString() + "_no_sync.wav";
             }
-            if (!Directory.Exists(audio_tmp_file_path))
-            {
-                Directory.CreateDirectory(audio_tmp_file_path);
-            }
-            FileStream fs = File.Create(audio_tmp_file_path + "/" + "请勿操作此文件夹内文件！");
-            fs.Close();
+            save_refresh();
 
             video_tools = new VideoTools(callback);
         }
@@ -162,11 +172,31 @@ namespace FaceMelody.SystemCore
         {
             try
             {
+                clear_tmp_file();
+                for (int i = 0; i < MAX_AUDIO_TRACK; i++)
+                {
+                    audio_track[i].clear();
+                }
+            }
+            catch (Exception e)
+            {
+                System.Windows.Forms.MessageBox.Show(e.Message);
+                return false;
+            }
+            return true;
+        }
+        #endregion
+
+        #region PRIVATE_FUNCTION
+
+        private bool clear_tmp_file()
+        {
+            try
+            {
                 for (int i = 0; i < MAX_AUDIO_TRACK; i++)
                 {
                     if (File.Exists(audio_tmp_file_path + "/" + audio_tmp_file_name[i]))
                         File.Delete(audio_tmp_file_path + "/" + audio_tmp_file_name[i]);
-                    audio_track[i].clear();
                 }
                 if (File.Exists(audio_tmp_file_path + "/" + audio_mix_tmp_file_name))
                     File.Delete(audio_tmp_file_path + "/" + audio_mix_tmp_file_name);
@@ -180,32 +210,49 @@ namespace FaceMelody.SystemCore
             }
             return true;
         }
-        #endregion
-
-        #region PRIVATE_FUNCTION
         private bool save_refresh()
         {
             try
             {
+                clear_tmp_file();
+                if (!Directory.Exists(audio_tmp_file_path))
+                {
+                    Directory.CreateDirectory(audio_tmp_file_path);
+                }
+                FileStream fs = File.Create(audio_tmp_file_path + "/" + "请勿操作此文件夹内文件！");
+                fs.Close();
                 bool all_empty = true;
                 for (int i = 0; i < MAX_AUDIO_TRACK; i++)
                 {
-                    if(audio_track[i].SampleRate == 0)
+                    if (audio_track[i].SampleRate == 0)
                         continue;
                     if (File.Exists(audio_tmp_file_path + "/" + audio_tmp_file_name[i]))
                         File.Delete(audio_tmp_file_path + "/" + audio_tmp_file_name[i]);
                     audio_tools.audio_writer(audio_track[i], audio_tmp_file_name[i], audio_tmp_file_path);
                     all_empty = false;
-
-                    //[TODO]渲染混合文件代码
+                }
+                if (!all_empty)
+                {
+                    audio_tools.audio_writer(mix_audio_track, audio_mix_tmp_file_name, audio_tmp_file_path);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 System.Windows.Forms.MessageBox.Show(e.Message);
                 return false;
             }
             return true;
+        }
+
+        private long max_audio_track_sec()
+        {
+            long ret = -1;
+            for (int i = 0; i < MAX_AUDIO_TRACK; i++)
+            {
+                if (!audio_track[i].is_empty)
+                    ret = Math.Max(ret, audio_track[i].max_milisec);
+            }
+            return ret;
         }
         #endregion
 
