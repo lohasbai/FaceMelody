@@ -78,8 +78,9 @@ namespace FaceMelody.SystemCore
         /// <para>若读取失败则返回值里的file为null</para>
         /// </summary>
         /// <param name="file">包含文件名的完整路径</param>
+        /// <param name="no_emotion">若为true，不识别表情（不需要网络）</param>
         /// <returns></returns>
-        public async Task<BaseVideo> video_reader(string file)
+        public async Task<BaseVideo> video_reader(string file, bool no_emotion = false)
         {
             BaseVideo ret = new BaseVideo();
             ret.clear();
@@ -112,6 +113,7 @@ namespace FaceMelody.SystemCore
                             break;
                     }
                 });
+
                 fast_callback(0.1, "分离视频与音频", "读取音频");
 
                 //读取分离的音频
@@ -134,15 +136,18 @@ namespace FaceMelody.SystemCore
 
                 EmotionTools et = new EmotionTools();
                 ret.emotion_per_3_sec = new List<Emotion[]>();
-                for (int i = 0; i < sample_num; i++)
+                if (!no_emotion)
                 {
-                    fast_callback((1 - 0.15) / sample_num * i + 0.15,
-                        ((i == 0) ? ("读取视频采样") : ("处理第" + i.ToString() + "个采样")),
-                        "处理第" + (i + 1).ToString() + "个采样");
-                    Emotion[] tmp_emotions = await
-                        et.get_emotion_from_image_file(video_sample_path +"/"+ i.ToString() + video_sample_file_tail);
-                    ret.emotion_per_3_sec.Add(tmp_emotions);
-                    await Task.Delay(3500);
+                    for (int i = 0; i < sample_num; i++)
+                    {
+                        fast_callback((1 - 0.15) / sample_num * i + 0.15,
+                            ((i == 0) ? ("读取视频采样") : ("处理第" + i.ToString() + "个采样")),
+                            "处理第" + (i + 1).ToString() + "个采样");
+                        Emotion[] tmp_emotions = await
+                            et.get_emotion_from_image_file(video_sample_path + "/" + i.ToString() + video_sample_file_tail);
+                        ret.emotion_per_3_sec.Add(tmp_emotions);
+                        await Task.Delay(3500);
+                    }
                 }
 
                 fast_callback(1, "处理第" + (sample_num - 1).ToString() + "个采样", "返回处理结果，删除临时文件");
