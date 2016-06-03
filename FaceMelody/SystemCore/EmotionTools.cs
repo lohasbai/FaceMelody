@@ -17,7 +17,7 @@ namespace FaceMelody.SystemCore
         #region CONST
         private const string KEY1 = "f8fe23814783416b985453154aeb035c";
         private const string KEY2 = "7a9d04af4f984e1c97600dd7020b3ff3";
-        public const float PRECISION = 0.000001f;
+        private const float PRECISION = 0.000001f;
         #endregion
 
         #region STRUCT

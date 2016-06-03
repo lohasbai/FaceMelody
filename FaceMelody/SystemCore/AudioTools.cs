@@ -12,14 +12,14 @@ namespace FaceMelody.SystemCore
     {
         #region CONST
 
-        const int _chunkID = 1179011410;
-        const int _riffType = 1163280727;
-        const int _fmtID = 544501094;
-        const int _fmtSize = 16;//限制文件大小60分钟！
-        const int _dataID = 1635017060;
-        const Int16 _fmtCode = 1;
-        const Int16 _fmtBlockAlign = 4;
-
+        private const int _chunkID = 1179011410;
+        private const int _riffType = 1163280727;
+        private const int _fmtID = 544501094;
+        private const int _fmtSize = 16;//限制文件大小60分钟！
+        private const int _dataID = 1635017060;
+        private const Int16 _fmtCode = 1;
+        private const Int16 _fmtBlockAlign = 4;
+        private const float PRECISION = 0.0001f;
         #endregion
 
         #region BASE_STRUCT
@@ -43,18 +43,27 @@ namespace FaceMelody.SystemCore
             /// <summary>
             /// 返回音频最大毫秒数，若无音频返回-1
             /// </summary>
-            public long get_max_milisec
+            public long max_milisec
             {
                 get
                 {
                     return (LVoice == null || SampleRate == 0) ? (-1) : ((long)LVoice.Count * 1000 / SampleRate);
                 }
             }
-
             /// <summary>
             /// 比特深度，勿改
             /// </summary>
             public const int BitDepth = 16;
+            /// <summary>
+            /// 是否为空音频
+            /// </summary>
+            public bool is_empty
+            {
+                get
+                {
+                    return (this.LVoice == null || this.SampleRate == 0);
+                }
+            }
 
             /// <summary>
             /// 清空本段声音
@@ -68,12 +77,31 @@ namespace FaceMelody.SystemCore
             /// 完全复制
             /// </summary>
             /// <param name="dst">待复制到的目标</param>
-            public void copy_to(ref BaseAudio dst)
+            public void copy_to(ref BaseAudio dst,List<int> range = null)
             {
                 dst.clear();
-                dst.LVoice = new List<float>(this.LVoice.ToArray());
-                if (this.RVoice != null)
-                    dst.RVoice = new List<float>(this.RVoice.ToArray());
+                if (this.is_empty)
+                    return;
+                if (range == null || range.Count < 2)
+                {
+                    dst.LVoice = new List<float>(this.LVoice.ToArray());
+                    if (this.RVoice != null)
+                        dst.RVoice = new List<float>(this.RVoice.ToArray());
+                }
+                else if(range[0] >= range[1] || range[0] < 0 || range[1] > this.LVoice.Count)
+                    return;
+                else
+                {
+                    dst.LVoice = new List<float>();
+                    if (this.RVoice != null)
+                        dst.RVoice = new List<float>();
+                    for (int i = range[0]; i < range[1]; i++)
+                    {
+                        dst.LVoice.Add(this.LVoice[i]);
+                        if (this.RVoice != null)
+                            dst.RVoice.Add(this.RVoice[i]);
+                    }
+                }
                 dst.SampleRate = this.SampleRate;
                 return;
             }
@@ -181,7 +209,46 @@ namespace FaceMelody.SystemCore
                 return false;
             }
         }
+        /// <summary>
+        /// 混合音频，若出错将返回空音频
+        /// <para>若start小于零则默认从0开始</para>
+        /// <para>若end大于最大毫秒数将截取到最后，超出部分补0</para>
+        /// <para>SampleRate将和第一条音轨一致</para>
+        /// </summary>
+        /// <param name="src">音频列表</param>
+        /// <param name="start">开始混合的毫秒数</param>
+        /// <param name="end">结束混合的毫秒数</param>
+        /// <param name="proportions">各成分占比，请确保其和为1</param>
+        /// <returns></returns>
+        public BaseAudio audio_mixer(List<BaseAudio> src, int start, int end, List<double> proportions)
+        {
+            BaseAudio ret = new BaseAudio();
+            if (src.Count != proportions.Count || src.Count < 1 || Math.Abs(proportions.Sum() - 1) > PRECISION)
+                return ret;
 
+            List<int> sample_start = new List<int>();
+            List<int> sample_end = new List<int>();
+
+            int src_0_sample_start, src_0_sample_end;
+            if(!locate(src[0],start,end,out src_0_sample_start,out src_0_sample_end)
+                return ret;
+
+            sample_start.Add(src_0_sample_start);
+            sample_end.Add(src_0_sample_end);
+
+            List<int> tmp_copy_list = new List<int>();
+            tmp_copy_list.Add(src_0_sample_start);
+            tmp_copy_list.Add(src_0_sample_end);
+
+            src[0].copy_to(ref ret,tmp_copy_list);
+
+            for (int i = 0; i < src.Count; i++)
+            {
+                int tmp_sample_start, tmp_sample_end;
+            }
+
+                return ret;
+        }
         /// <summary>
         /// 将音频减去一段，若出错将返回原音频
         /// <para>若start小于零则默认从0开始</para>
@@ -191,7 +258,7 @@ namespace FaceMelody.SystemCore
         /// <param name="start">开始毫秒数</param>
         /// <param name="end">结束毫秒数</param>
         /// <returns>处理后的音频</returns>
-        public BaseAudio audio_cutter(BaseAudio src,int start, int end)
+        public BaseAudio audio_cutter(BaseAudio src, int start, int end)
         {
             int sample_start, sample_end;
             if (!locate(src, start, end, out sample_start, out sample_end))

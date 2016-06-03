@@ -57,7 +57,7 @@ namespace FaceMelody
             return ret;
         }
 
-        EmotionTools.VideoEmotionResultPer100MiliSec last;
+        //EmotionTools.VideoEmotionResultPer100MiliSec last;
         EmotionTools et = new EmotionTools();
         VideoTools.BaseVideo bv;
         //TimeLineCore tlc = new TimeLineCore();

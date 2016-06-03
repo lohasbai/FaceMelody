@@ -26,7 +26,11 @@ namespace FaceMelody.SystemCore
         /// <summary>
         /// 音频临时文件存放的文件夹名
         /// </summary>
-        public string audio_tmp_file_path = "_audio_tmp_no_sync";
+        public const string audio_tmp_file_path = "_audio_tmp_no_sync";
+        /// <summary>
+        /// 混合后的渲染音频
+        /// </summary>
+        public const string audio_mix_tmp_file_name = "_audio_tmp_mix_no_sync.wav"; 
 
         /// <summary>
         /// 视频轨上的视频
@@ -61,8 +65,13 @@ namespace FaceMelody.SystemCore
 
             video_tools = new VideoTools(callback);
         }
-
-        public bool load_to_track(string file, int track_num)
+        /// <summary>
+        /// 将音频读取至音轨
+        /// </summary>
+        /// <param name="file">包含路径的音频文件名</param>
+        /// <param name="track_num">音轨序号</param>
+        /// <returns></returns>
+        public bool load_to_audio_track(string file, int track_num)
         {
             try
             {
@@ -73,6 +82,26 @@ namespace FaceMelody.SystemCore
                 audio_track[track_num] = audio_tools.audio_reader(file);
                 if (!save_refresh())
                     throw new Exception("临时文件保存失败，请确认文件未被占用！");
+            }
+            catch (Exception e)
+            {
+                System.Windows.Forms.MessageBox.Show(e.Message);
+                return false;
+            }
+            return true;
+        }
+        /// <summary>
+        /// 将视频读取至
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        public async Task<bool> load_to_video_track(string file)
+        {
+            try
+            {
+                if (!File.Exists(file))
+                    throw new Exception("文件不存在");
+                video_track = await video_tools.video_reader(file);
             }
             catch (Exception e)
             {
@@ -139,6 +168,8 @@ namespace FaceMelody.SystemCore
                         File.Delete(audio_tmp_file_path + "/" + audio_tmp_file_name[i]);
                     audio_track[i].clear();
                 }
+                if (File.Exists(audio_tmp_file_path + "/" + audio_mix_tmp_file_name))
+                    File.Delete(audio_tmp_file_path + "/" + audio_mix_tmp_file_name);
                 if (Directory.Exists(audio_tmp_file_path))
                     Directory.Delete(audio_tmp_file_path, true);
             }
@@ -156,6 +187,7 @@ namespace FaceMelody.SystemCore
         {
             try
             {
+                bool all_empty = true;
                 for (int i = 0; i < MAX_AUDIO_TRACK; i++)
                 {
                     if(audio_track[i].SampleRate == 0)
@@ -163,6 +195,9 @@ namespace FaceMelody.SystemCore
                     if (File.Exists(audio_tmp_file_path + "/" + audio_tmp_file_name[i]))
                         File.Delete(audio_tmp_file_path + "/" + audio_tmp_file_name[i]);
                     audio_tools.audio_writer(audio_track[i], audio_tmp_file_name[i], audio_tmp_file_path);
+                    all_empty = false;
+
+                    //[TODO]渲染混合文件代码
                 }
             }
             catch(Exception e)
