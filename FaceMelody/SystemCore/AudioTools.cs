@@ -303,7 +303,7 @@ namespace FaceMelody.SystemCore
             return ret;
         }
         /// <summary>
-        /// 交换声道效果，若出错将返回原音频
+        /// 交换声道，若出错将返回原音频
         /// <para>若本来就是单声道的，则返回原音频</para>
         /// <para>若start小于零则默认从0开始</para>
         /// <para>若end大于最大毫秒数将截取到最后</para>
@@ -329,10 +329,7 @@ namespace FaceMelody.SystemCore
             ret.RVoice.RemoveRange(start_tick, full_len);
             ret.RVoice.InsertRange(start_tick, src.LVoice.GetRange(start_tick, full_len));
 
-            for (int i = start_tick; i < end_tick; i++)
-            {
-                
-            }
+            return ret;
         }
         #endregion
 

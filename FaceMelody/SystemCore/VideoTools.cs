@@ -59,6 +59,7 @@ namespace FaceMelody.SystemCore
         /// <summary>
         /// 构造函数，传入回调函数
         /// </summary>
+        /// <example>
         /// <code>
         /// public void print(object sender, ProcessReportEventArgs e)
         /// {
@@ -71,14 +72,6 @@ namespace FaceMelody.SystemCore
         {
             callback += back_function;
         }
-
-        //public int debug(int c = 0)
-        //{
-        //    ProcessReportEventArgs prea = new ProcessReportEventArgs();
-        //    prea.just_done = "abc";
-        //    callback(this, prea);
-        //    return 0;
-        //}
 
         /// <summary>
         /// 读取一个视频（推荐avi）

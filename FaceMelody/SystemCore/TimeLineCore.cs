@@ -28,7 +28,16 @@ namespace FaceMelody.SystemCore
         /// </summary>
         public string audio_tmp_file_path = "_audio_tmp_no_sync";
 
+        /// <summary>
+        /// 视频轨上的视频
+        /// <para>请注意：视频中的音频不会在导出时被渲染</para>
+        /// <para>（除非音频被加在音轨中）</para>
+        /// </summary>
+        public VideoTools.BaseVideo video_track;
+
+
         private AudioTools audio_tools = new AudioTools();
+        private VideoTools video_tools;
         #endregion
 
         #region PUBLIC_FUNCTION
@@ -36,7 +45,8 @@ namespace FaceMelody.SystemCore
         /// 默认构造函数，会创建临时文件夹
         /// <para>请确保退出时调用clear清除文件夹</para>
         /// </summary>
-        public TimeLineCore()
+        /// <param name="callback">回调函数，编写方法详见VideoTools的构造函数的注释</param>
+        public TimeLineCore(VideoTools.OnProcessCall callback)
         {
             for (int i = 0; i < MAX_AUDIO_TRACK; i++)
             {
@@ -48,6 +58,8 @@ namespace FaceMelody.SystemCore
             }
             FileStream fs = File.Create(audio_tmp_file_path + "/" + "请勿操作此文件夹内文件！");
             fs.Close();
+
+            video_tools = new VideoTools(callback);
         }
 
         public bool load_to_track(string file, int track_num)
