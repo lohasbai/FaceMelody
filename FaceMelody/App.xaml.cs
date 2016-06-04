@@ -21,11 +21,11 @@ namespace FaceMelody
         private void Application_Startup(object sender, StartupEventArgs e)
         {
 
-            //Application currApp = Application.Current;
-            //currApp.StartupUri = new Uri("GUI/MainWorkshop.xaml", UriKind.RelativeOrAbsolute);
+            Application currApp = Application.Current;
+            currApp.StartupUri = new Uri("GUI/MainWorkshop.xaml", UriKind.RelativeOrAbsolute);
 
-            System.Windows.Forms.Application.Run(new DebugForm());
-            Shutdown();
+            //System.Windows.Forms.Application.Run(new DebugForm());
+            //Shutdown();
         }
     }
 }

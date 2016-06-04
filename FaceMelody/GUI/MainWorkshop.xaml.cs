@@ -28,6 +28,7 @@ namespace FaceMelody
     public partial class MainWorkshop : Window
     {
         private TimeLineCore timeLine;
+        MediaPlayer soundPlayer;
 
         public double fullTimeLength;
         public double videoHeight;
@@ -111,7 +112,7 @@ namespace FaceMelody
 
         #region Menu
 
-        private async void OpenFile_Menu_Click(object sender, RoutedEventArgs e)
+        private async void LoadVideo_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
 
@@ -129,6 +130,10 @@ namespace FaceMelody
 
                     isVideoRead = await timeLine.load_to_video_track(filePath);
 
+                    curAddTrack = 1;
+                    DrawWave(timeLine.audio_track[curAddTrack - 1].LVoice, 
+                        timeLine.audio_track[curAddTrack - 1].SampleRate, curAddTrack);
+
                     if (isVideoRead)
                     {
                         MessageBox.Show("视频读取成功");
@@ -141,7 +146,7 @@ namespace FaceMelody
             }
         }
 
-        private void AddMaterial_Click(object sender, RoutedEventArgs e)
+        private void LoadVoice_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
 
@@ -150,14 +155,33 @@ namespace FaceMelody
                 string filePath = openFileDialog.FileName;
                 if (filePath != "" || filePath != null)
                 {
-                    AddMaterial(filePath);
+                    LoadVoice(filePath);
                 }
             }
         }
+
+        private async void Export_Click(object sender, RoutedEventArgs e)
+        {
+            await timeLine.save_all_track_to_file("mixTest.mp4");
+        }
+
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            timeLine.clear_all();
+            this.Close();
+        }
+
+        private void About_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("作者：\n" + "    自36  刘  柏 \n" + "    自32  朱天奕");
+        }
+
         #endregion
 
-        #region Material
-        private void AddMaterial(string filePath)
+
+        #region Voice
+
+        private void LoadVoice(string filePath)
         {
             Material_StackPanel.Height += 50;
 
@@ -168,7 +192,7 @@ namespace FaceMelody
             {
                 Name = "_"+materialNum.ToString()+"_Material",
                 Content = fileName,
-                FontSize = 10,
+                FontSize = 12,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Background = new SolidColorBrush(Color.FromArgb(100, 34, 33, 37)),
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
@@ -181,11 +205,11 @@ namespace FaceMelody
             materialNameList[materialNum] = filePath;
             materialNum++;
 
-            List_Label.MouseDown += new MouseButtonEventHandler(ChooseMaterial_Click);
+            List_Label.MouseDown += new MouseButtonEventHandler(ChooseVoice_Click);
             Material_StackPanel.Children.Add(List_Label);
         }
 
-        private void ChooseMaterial_Click(object sender, RoutedEventArgs e)
+        private void ChooseVoice_Click(object sender, RoutedEventArgs e)
         {
             Label List_Label = sender as Label;
             string sourceName = List_Label.Name;
@@ -208,7 +232,7 @@ namespace FaceMelody
         }
         #endregion
 
-        #region Display
+        #region Video
 
         private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e)
         {
@@ -235,6 +259,11 @@ namespace FaceMelody
             {
                 isPlay = true;
                 this.VideoPlayer.Play();
+
+                soundPlayer = new MediaPlayer();
+                soundPlayer.Open(new Uri(TimeLineCore.audio_tmp_file_path + "/" + TimeLineCore.audio_mix_tmp_file_name, UriKind.Relative));
+                this.soundPlayer.Position = TimeSpan.FromMilliseconds(PositionToTime(curX));
+                this.soundPlayer.Play();
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Pause_Icon.png", UriKind.Relative));
 
                 if (isVideoRead)
@@ -248,6 +277,8 @@ namespace FaceMelody
             {
                 isPlay = false;
                 this.VideoPlayer.Pause();
+                this.soundPlayer.Pause();
+                this.soundPlayer.Close();
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Play_Icon.png", UriKind.Relative));
             }
         }
@@ -261,75 +292,135 @@ namespace FaceMelody
             this.VideoPlayer.Pause();
         }
 
-        private void DisplayInformation(double curVideoTime)
+        private void DisplayRecognitionResult(double curVideoTime)
         {
-            int emotionIndex = Convert.ToInt16(Math.Floor((curVideoTime/1000)/3));
-            int maxEmotionIndex = Convert.ToInt16(Math.Floor((videoLength / 1000) / 3));
-
-            if (emotionIndex > maxEmotionIndex - 1)
+            int recognitionResultIndex = Convert.ToInt16(Math.Floor((curVideoTime /1000) / 3));
+            int recognitionResultNum = Convert.ToInt16(Math.Floor((videoLength / 1000) / 3));
+            if (recognitionResultIndex > recognitionResultNum - 1)
             {
-                emotionIndex = maxEmotionIndex;
+                recognitionResultIndex = recognitionResultNum - 1;
             }
 
-            if (timeLine.video_track.emotion_per_3_sec[emotionIndex]!= null)
+            if (timeLine.video_track.emotion_per_3_sec[recognitionResultIndex]!= null)
             {
                 int faceNum = 1;
-
-                // Clear ratangles
-                DrawRectangle_Canvas.Children.Clear();
-
+                DrawFaceFrame_Canvas.Children.Clear();
+                DisplayRecognitionText_Canvas.Children.Clear();
                 for (int i = 0; i < faceNum; i++)
                 {
-                    // Get parameters for rectangles
-                    int originFrameHeight = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Height;
-                    int originFrameWidth = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Width;
-                    int originFrameLeft = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Left;
-                    int originFrameTop = timeLine.video_track.emotion_per_3_sec[emotionIndex][i].FaceRectangle.Top;
-
-                    // Get parameters for positions
-                    double zoomRatio = 0;
-                    if (originVideoHeight / originVideoWidth > maxVideoHeight / maxVideoWidth)
-                    {
-                        zoomRatio = maxVideoHeight / originVideoHeight;
-                    }
-                    else
-                    {
-                        zoomRatio = maxVideoWidth / originVideoWidth;
-                    }
-                    actualVideoHeight = zoomRatio * originVideoHeight;
-                    actualVideoWidth = zoomRatio * originVideoWidth;
-                    double actualFrameHeight = zoomRatio * originFrameHeight;
-                    double actualFrameWidth = zoomRatio * originFrameWidth;
-                    double actualFrameLeft = (maxVideoWidth - actualVideoWidth) / 2 + zoomRatio * originFrameLeft;
-                    double actualFrameTop = (maxVideoHeight - actualVideoHeight) / 2 + zoomRatio * originFrameTop;
-
-                   // MessageBox.Show(actualVideoHeight.ToString() + ", " + actualVideoWidth.ToString());
-
-                    //Draw rectangle
-                    Rectangle faceFrame = new Rectangle();
-                    faceFrame.Width = actualFrameHeight;
-                    faceFrame.Height = actualFrameWidth;
-                    faceFrame.SetValue(Canvas.LeftProperty, actualFrameLeft);
-                    faceFrame.SetValue(Canvas.TopProperty, actualFrameTop);
-                    BrushConverter brushConverter = new BrushConverter();
-                    Brush myBrush = (Brush)brushConverter.ConvertFromString("#40FFFFFF");
-                    faceFrame.Fill = myBrush;
-                    DrawRectangle_Canvas.Children.Insert(0, faceFrame);
-
-                    MessageBox.Show("zoomRatio: " + zoomRatio.ToString() +
-                                    " height: " + actualFrameHeight.ToString() +
-                                    " width: " + actualFrameWidth.ToString() +
-                                    " leftOffset: " + actualFrameLeft.ToString() +
-                                    " topOffset: " + actualFrameTop.ToString());
-
-                    // Display the information
-
-
+                    // Draw the frame
+                    DrawFaceFrame(recognitionResultIndex, i);
+                    // Display the text
+                    DisplayRecognitionText(recognitionResultIndex, i);
                 }
-
-                
-
             }
+        }
+
+        private void DrawFaceFrame(int recognizeResultIndex, int faceIndex)
+        {
+            // Get parameters for rectangles
+            int originFrameHeight = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex][faceIndex].FaceRectangle.Height;
+            int originFrameWidth = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex][faceIndex].FaceRectangle.Width;
+            int originFrameLeft = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex][faceIndex].FaceRectangle.Left;
+            int originFrameTop = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex][faceIndex].FaceRectangle.Top;
+
+            // Get parameters for positions
+            double zoomRatio = 0;
+            if (originVideoHeight / originVideoWidth > maxVideoHeight / maxVideoWidth)
+            {
+                zoomRatio = maxVideoHeight / originVideoHeight;
+            }
+            else
+            {
+                zoomRatio = maxVideoWidth / originVideoWidth;
+            }
+            actualVideoHeight = zoomRatio * originVideoHeight;
+            actualVideoWidth = zoomRatio * originVideoWidth;
+            double actualFrameHeight = zoomRatio * originFrameHeight;
+            double actualFrameWidth = zoomRatio * originFrameWidth;
+            double actualFrameLeft = (maxVideoWidth - actualVideoWidth) / 2 + zoomRatio * originFrameLeft;
+            double actualFrameTop = (maxVideoHeight - actualVideoHeight) / 2 + zoomRatio * originFrameTop;
+
+            //Draw rectangle
+            Rectangle faceFrame = new Rectangle();
+            faceFrame.Width = actualFrameHeight;
+            faceFrame.Height = actualFrameWidth;
+            faceFrame.SetValue(Canvas.LeftProperty, actualFrameLeft);
+            faceFrame.SetValue(Canvas.TopProperty, actualFrameTop);
+            BrushConverter brushConverter = new BrushConverter();
+            Brush myBrush = (Brush)brushConverter.ConvertFromString("#40FFFFFF");
+            faceFrame.Fill = myBrush;
+            DrawFaceFrame_Canvas.Children.Insert(0, faceFrame);
+
+            //MessageBox.Show("zoomRatio: " + zoomRatio.ToString() +
+            //                " height: " + actualFrameHeight.ToString() +
+            //                " width: " + actualFrameWidth.ToString() +
+            //                " leftOffset: " + actualFrameLeft.ToString() +
+            //                " topOffset: " + actualFrameTop.ToString());
+
+        }
+
+        private void DisplayRecognitionText(int recognizeResultIndex, int faceIndex)
+        {
+            double[] emotionScore = new double[8];
+            emotionScore[0] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Anger;
+            emotionScore[1] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Contempt;
+            emotionScore[2] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Disgust;
+            emotionScore[3] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Fear;
+            emotionScore[4] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Happiness;
+            emotionScore[5] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Neutral;
+            emotionScore[6] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Sadness;
+            emotionScore[7] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
+                [faceIndex].Scores.Surprise;
+
+            string[] emotionMapping = {"愤怒", "轻蔑", "厌恶", "恐惧", "开心", "平静", "悲伤", "惊讶"};
+
+            // Find the most obvious three emotion
+            int[] emotionIndex = {-1, -1, -1};
+            for (int i = 0; i < 3; i++)
+            {
+                int maxIndex = 0;
+                for (int j = 0; j < 8; j++)
+                {
+                    if (emotionScore[j] > emotionScore[maxIndex] && j != emotionIndex[0]
+                        && j != emotionIndex[1])
+                    {
+                        maxIndex = j;
+                    }
+                }
+                emotionIndex[i] = maxIndex;
+            }
+
+            // Display the text
+            TextBlock TextBlock = new TextBlock
+            {
+                Text = "第" + (faceIndex+1).ToString() + "张脸的识别结果：\n" + 
+                          emotionMapping[emotionIndex[0]] + ": " +
+                          Math.Round(100 * emotionScore[emotionIndex[0]], 2).ToString() + "%\n" +
+                          emotionMapping[emotionIndex[1]] + ": " +
+                          Math.Round(100 * emotionScore[emotionIndex[1]], 2).ToString() + "%\n" +
+                          emotionMapping[emotionIndex[2]] + ": " +
+                          Math.Round(100 * emotionScore[emotionIndex[2]], 2).ToString() + "%\n" +
+                          "建议选用 的音乐",
+                FontSize = 12,
+                Background = new SolidColorBrush(Color.FromArgb(100, 35, 35, 35)),
+                Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
+                Height = 100,
+                Width = 177,
+                LineHeight = 20,
+            };
+            TextBlock.SetValue(Canvas.TopProperty, Convert.ToDouble(faceIndex * 80 + 10));
+            TextBlock.SetValue(Canvas.LeftProperty, Convert.ToDouble(5));
+
+            DisplayRecognitionText_Canvas.Children.Insert(0, TextBlock);
+
         }
 
         #endregion
@@ -389,17 +480,25 @@ namespace FaceMelody
 
         private void Delete_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (!isDelete)
+            Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOn_Icon.png", UriKind.Relative));
+
+            timeLine.audio_function_center("cut", curEditTrack-1, PositionToTime(startX), PositionToTime(endX));
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
+            
+            // Remove previous preChoiceArea
+            Rectangle preChoiceArea = Timeline_Area_Canvas.FindName("choiceArea_Rectangle") as Rectangle;
+            if (preChoiceArea != null)
             {
-                isDelete = true;
-                Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOn_Icon.png", UriKind.Relative));
-            }
-            else
-            {
-                isDelete = false;
-                Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOff_Icon.png", UriKind.Relative));
+                Timeline_Area_Canvas.Children.Remove(preChoiceArea);
+                Timeline_Area_Canvas.UnregisterName("choiceArea_Rectangle");
             }
         }
+
+        private void Delete_Image_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            Delete_Image.Source = new BitmapImage(new Uri(@".\Icon\DeleteOff_Icon.png", UriKind.Relative));
+        }
+
         #endregion
 
         #region Timeline
@@ -414,21 +513,29 @@ namespace FaceMelody
                 // Draw the current select bar
                 DrawSelectBar();
                 // Display the video at current position
-                double curTime = curX / 870 * fullTimeLength;
-                if (curTime > videoLength - 100)
+                int curTime = PositionToTime(curX);
+                if (curTime > (int)videoLength - 100)
                 {
-                    curTime = videoLength - 100;
+                    curTime = (int)videoLength - 100;
                 }
-                this.VideoPlayer.Position = TimeSpan.FromMilliseconds(curTime);
+                if (curTime < 100)
+                {
+                    curTime = 100;
+                }
+                this.VideoPlayer.Position = TimeSpan.FromMilliseconds(curTime - 50);
                 this.VideoPlayer.Play();
                 Thread.Sleep(50);
                 this.VideoPlayer.Pause();
+                // Display the video at current position
+                this.soundPlayer.Position = TimeSpan.FromMilliseconds(curTime);
+                this.soundPlayer.Pause();
+
                 isPlay = false;
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Play_Icon.png", UriKind.Relative));
                 // Add face frames
                 if (isVideoRead)
                 {
-                    DisplayInformation(curTime);
+                    DisplayRecognitionResult(curTime);
                 }
             }
             if (isArea)
@@ -453,6 +560,7 @@ namespace FaceMelody
                 //Draw the rectangle of the chioce area
                 DrawChoiceArea();
                 //MessageBox.Show(startX.ToString() + "," + endX.ToString());
+                InsureStartEnd();
             }
         }
 
@@ -480,7 +588,7 @@ namespace FaceMelody
 
         private void DrawChoiceArea()
         {
-            // Remove previous preSelectBar
+            // Remove previous preChoiceArea
             Rectangle preChoiceArea = Timeline_Area_Canvas.FindName("choiceArea_Rectangle") as Rectangle;
             if (preChoiceArea != null)
             {
@@ -632,7 +740,10 @@ namespace FaceMelody
         #region Effects
         private void Weaken_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
+            List<double> parameter = new List<double>();
+            parameter.Add(1.0);
+            parameter.Add(0.1);
+            timeLine.audio_function_center("gradient", curEditTrack - 1, 100, 10000, parameter);
         }
 
         private void Strengthen_Label_MouseDown(object sender, MouseButtonEventArgs e)
@@ -640,30 +751,28 @@ namespace FaceMelody
 
         }
 
-        private void Rewind_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        private void Insert_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
 
         }
 
+        private void Rewind_Label_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            timeLine.audio_function_center("upend", curEditTrack - 1, PositionToTime(startX), PositionToTime(endX));
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
+        }
+       
         private void Echo_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
 
         }
 
-        private void Filter_Label_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-
-        }
 
         private void SoundTrack_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
 
         }
 
-        private void ChangeTune_Label_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-
-        }
         #endregion
 
         #region Process
@@ -704,6 +813,35 @@ namespace FaceMelody
             }
         }
         #endregion
+
+        #region Assist
+        private void InsureStartEnd()
+        {
+            if (startX > endX)
+            {
+                double temp = startX;
+                startX = endX;
+                endX = temp;
+            }
+        }
+
+        private int PositionToTime(double position)
+        {
+            int milliTime;
+            milliTime = (int)(position / 870 * fullTimeLength);
+            return milliTime;
+        }
+
+        private double TimeToPostion(int milliTime)
+        {
+            double position;
+            position = 870.0 * (double) milliTime / fullTimeLength;
+            return position;
+        }
+
+        #endregion
+
+
 
     }
 }

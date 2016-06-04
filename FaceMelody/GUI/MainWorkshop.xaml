@@ -19,18 +19,21 @@
               Background="#ecf0f1" ShowGridLines="False">
             <Menu>
                 <MenuItem Header="文件">
-                    <MenuItem Name="OpenFile_Menu" Click="OpenFile_Menu_Click" Header="打开"/>
-                    <MenuItem Header="保存"/>
-                    <MenuItem Header="退出"/>
+                    <MenuItem Click="LoadVideo_Click" Header="导入视频"/>
+                    <MenuItem Click="LoadVoice_Click" Header="导入音频"/>
+                    <MenuItem Click="Export_Click" Header="导出"/>
+                    <MenuItem Click="Exit_Click" Header="退出"/>
                 </MenuItem>
-                <MenuItem Header="编辑"/>
-                <MenuItem Header="素材库">
-                    <MenuItem Header="添加素材" Click="AddMaterial_Click"/>
-                    <MenuItem Header="浏览素材" />
+                <MenuItem Header="编辑">
+                    <MenuItem MouseDown="Weaken_Label_MouseDown" Header="渐弱"/>
+                    <MenuItem MouseDown="Strengthen_Label_MouseDown" Header="渐强"/>
+                    <MenuItem MouseDown="Insert_Label_MouseDown" Header="插入"/>
+                    <MenuItem MouseDown="Rewind_Label_MouseDown" Header="倒放"/>
+                    <MenuItem MouseDown="Echo_Label_MouseDown" Header="回音"/>
+                    <MenuItem MouseDown="SoundTrack_Label_MouseDown" Header="换声道"/>
                 </MenuItem>
                 <MenuItem Header="帮助">
-                    <MenuItem Header="使用指南"/>
-                    <MenuItem Header="关于"/>
+                    <MenuItem Click="About_Click" Header="关于"/>
                 </MenuItem>
             </Menu>
         </Grid>
@@ -68,16 +71,18 @@
                 <Image Name="Play_Image" MouseDown="Play_Image_MouseDown" Source=".\Icon\Play_Icon.png" 
                    Stretch="Fill" Visibility="Hidden"
                        HorizontalAlignment="Center" Margin="0,0,0,5" VerticalAlignment="Bottom" Height="20" Width="20" />
-                <Canvas Name="DrawRectangle_Canvas" Background="Transparent"
+                <Canvas Name="DrawFaceFrame_Canvas" Background="Transparent"
                         HorizontalAlignment="Center" Height="353" VerticalAlignment="Top" Width="576" Margin="0,0,0,0"/>
             </Grid>
 
             <Grid Name="Information_Grid" 
               Grid.Row="1" Grid.Column="2"
               Background="#303037" ShowGridLines="False">
-                <Label Content="Label" Background="#232323" 
-                       HorizontalAlignment="Left" VerticalContentAlignment="Center" Foreground="White" FontSize="14"
-                       Margin="10,10,0,0" VerticalAlignment="Top" Height="50" Width="170"/>
+
+                <Canvas Name="DisplayRecognitionText_Canvas" HorizontalAlignment="Left" Background="Transparent" Height="382" Margin="0,0,0,0" 
+                        VerticalAlignment="Top" Width="192"/>
+
+
             </Grid>
 
         </Grid>
@@ -92,7 +97,7 @@
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,55,0,0" VerticalAlignment="Top" Height="20" Width="20" />
             <Image Name="Effect_Image" MouseDown="Effect_Image_MouseDown" Source=".\Icon\EffectOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,85,0,0" VerticalAlignment="Top" Height="20" Width="20" />
-            <Popup x:Name="Effect_Pop" Width="115" Height="125"
+            <Popup x:Name="Effect_Pop" Width="115" Height="90"
                                StaysOpen="True" 
                                IsOpen="False" 
                                AllowsTransparency="True"
@@ -100,7 +105,7 @@
                                PlacementTarget="{Binding ElementName= Effect_Image}"
                                Placement="Bottom"
                                >
-                <Canvas Background="#802C3E50" Height="125">
+                <Canvas Background="#802C3E50" Height="95">
                     <Label Content="渐 弱" Name="Weaken_Label" MouseDown="Weaken_Label_MouseDown"
                                HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
@@ -109,15 +114,15 @@
                                HorizontalAlignment="Left" Margin="60,5,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
                                HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
-                    <Label Content="倒 放" Name="Rewind_Label" MouseDown="Rewind_Label_MouseDown"
+                    <Label Content="插 入" Name="Insert_Label" MouseDown="Insert_Label_MouseDown"
                                HorizontalAlignment="Left" Margin="5,35,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
                                HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
-                    <Label Content="回 音" Name="Echo_Label" MouseDown="Echo_Label_MouseDown"
+                    <Label Content="倒 放" Name="Rewind_Label" MouseDown="Rewind_Label_MouseDown"
                                HorizontalAlignment="Left" Margin="60,35,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
                                HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
-                    <Label Content="滤 波" Name="Filter_Label" MouseDown="Filter_Label_MouseDown"
+                    <Label Content="回 音" Name="Echo_Label" MouseDown="Echo_Label_MouseDown"
                                HorizontalAlignment="Left" Margin="5,65,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
                                HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
@@ -125,13 +130,9 @@
                                HorizontalAlignment="Left" Margin="60,65,0,0" VerticalAlignment="Top" 
                                Height="25" Width="50" Background="#C07F8C8D" 
                                HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
-                    <Label Content="变 调" Name="ChangeTune_Label" MouseDown="ChangeTune_Label_MouseDown"
-                               HorizontalAlignment="Left" Margin="5,95,0,0" VerticalAlignment="Top" 
-                               Height="25" Width="50" Background="#C07F8C8D" 
-                               HorizontalContentAlignment ="Center" Foreground="White" FontSize="10"/>
                 </Canvas>
             </Popup>
-            <Image Name="Delete_Image" MouseDown="Delete_Image_MouseDown" Source=".\Icon\DeleteOff_Icon.png" 
+            <Image Name="Delete_Image" MouseDown="Delete_Image_MouseDown" MouseUp="Delete_Image_MouseUp" Source=".\Icon\DeleteOff_Icon.png" 
                    Stretch="Fill" HorizontalAlignment="Left" Margin="5,115,0,0" VerticalAlignment="Top" Height="20" Width="20" />
 
             <Label Content="0:00" HorizontalAlignment="Left" Margin="70,2,0,0" VerticalAlignment="Top" 
