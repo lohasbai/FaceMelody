@@ -46,6 +46,16 @@ namespace FaceMelody.SystemCore
                 audio.clear();
                 file = "";
             }
+            /// <summary>
+            /// 视频是否为空
+            /// </summary>
+            public bool is_empty
+            {
+                get
+                {
+                    return (file == "");
+                }
+            }
         }
         #endregion
 
@@ -95,6 +105,7 @@ namespace FaceMelody.SystemCore
 
                 Process matlab_pro = new Process();
                 ProcessStartInfo start_info = new ProcessStartInfo("MyVideoReader.exe", file);
+                start_info.WindowStyle = ProcessWindowStyle.Minimized;
                 matlab_pro.StartInfo = start_info;
                 await Task.Run(() =>
                 {
@@ -135,7 +146,8 @@ namespace FaceMelody.SystemCore
                 int sample_num = info.GetFiles().Length;
 
                 EmotionTools et = new EmotionTools();
-                ret.emotion_per_3_sec = new List<Emotion[]>();
+                if(ret.emotion_per_3_sec == null)
+                    ret.emotion_per_3_sec = new List<Emotion[]>();
                 if (!no_emotion)
                 {
                     for (int i = 0; i < sample_num; i++)
@@ -168,37 +180,76 @@ namespace FaceMelody.SystemCore
         {
             try
             {
-                if (!File.Exists(video_file) || !File.Exists(audio_file) || Path.GetExtension(audio_file) != ".wav" || Path.GetExtension(video_file) != ".mp4")
-                    throw new Exception("找不到视频或音频文件或文件格式不合法");
-                if (Path.GetExtension(output_file) != ".mp4")
-                    throw new Exception("输出文件名错误或文件格式不合法");
-                if (File.Exists(output_file))
-                    File.Delete(output_file);
-
-                // ./ffmpeg.exe -i _no_sync_test_ver_2.mp4 -i testwav.wav -map 0:0 -map 1:0 123.mp4
-                Process ffmpeg_pro = new Process();
-                ProcessStartInfo start_info = new ProcessStartInfo("ffmpeg.exe",
-                    "-i " + video_file + " -i " + audio_file + " -map 0:0 -map 1:0 " + output_file);
-                ffmpeg_pro.StartInfo = start_info;
-                fast_callback(0, "渲染前检查", "渲染");
-                await Task.Run(() =>
+                if (audio_file != "")
                 {
-                    ffmpeg_pro.Start();
-                    int i = 0;
-                    while (true)
+                    if (!File.Exists(video_file) || !File.Exists(audio_file) || 
+                        Path.GetExtension(audio_file) != ".wav" || Path.GetExtension(video_file) != ".mp4")
+                        throw new Exception("找不到视频或音频文件或文件格式不合法");
+                    if (Path.GetExtension(output_file) != ".mp4")
+                        throw new Exception("输出文件名错误或文件格式不合法");
+                    if (File.Exists(output_file))
+                        File.Delete(output_file);
+
+                    // ./ffmpeg.exe -i _no_sync_test_ver_2.mp4 -i testwav.wav -map 0:0 -map 1:0 123.mp4
+                    Process ffmpeg_pro = new Process();
+                    ProcessStartInfo start_info = new ProcessStartInfo("ffmpeg.exe",
+                        "-i " + video_file + " -i " + audio_file + " -map 0:0 -map 1:0 " + output_file);
+                    ffmpeg_pro.StartInfo = start_info;
+                    fast_callback(0, "渲染前检查", "渲染");
+                    await Task.Run(() =>
                     {
-                        System.Threading.Thread.Sleep(10);
-                        i++;
-                        if (i > TIME_OUT)
+                        ffmpeg_pro.Start();
+                        int i = 0;
+                        while (true)
                         {
-                            ffmpeg_pro.Kill();
-                            throw new Exception("程序运行超时");
+                            System.Threading.Thread.Sleep(10);
+                            i++;
+                            if (i > TIME_OUT)
+                            {
+                                ffmpeg_pro.Kill();
+                                throw new Exception("程序运行超时");
+                            }
+                            if (ffmpeg_pro.HasExited)
+                                break;
                         }
-                        if (ffmpeg_pro.HasExited)
-                            break;
-                    }
-                });
-                fast_callback(1, "渲染", "返回结果");
+                    });
+                    fast_callback(1, "渲染", "返回结果");
+                }
+                else
+                {
+                    if (!File.Exists(video_file) || Path.GetExtension(video_file) != ".mp4")
+                        throw new Exception("找不到视频文件或文件格式不合法");
+                    if (Path.GetExtension(output_file) != ".mp4")
+                        throw new Exception("输出文件名错误或文件格式不合法");
+                    if (File.Exists(output_file))
+                        File.Delete(output_file);
+
+                    // ./ffmpeg.exe -i _no_sync_test_ver_2.mp4 -i testwav.wav -map 0:0 -map 1:0 123.mp4
+                    Process ffmpeg_pro = new Process();
+                    ProcessStartInfo start_info = new ProcessStartInfo("ffmpeg.exe",
+                        "-i " + video_file + " -map 0:0 " + output_file);
+                    start_info.WindowStyle = ProcessWindowStyle.Minimized;
+                    ffmpeg_pro.StartInfo = start_info;
+                    fast_callback(0, "渲染前检查", "渲染");
+                    await Task.Run(() =>
+                    {
+                        ffmpeg_pro.Start();
+                        int i = 0;
+                        while (true)
+                        {
+                            System.Threading.Thread.Sleep(10);
+                            i++;
+                            if (i > TIME_OUT)
+                            {
+                                ffmpeg_pro.Kill();
+                                throw new Exception("程序运行超时");
+                            }
+                            if (ffmpeg_pro.HasExited)
+                                break;
+                        }
+                    });
+                    fast_callback(1, "渲染", "返回结果");
+                }
             }
             catch (Exception e)
             {

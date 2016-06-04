@@ -60,7 +60,7 @@ namespace FaceMelody
         //EmotionTools.VideoEmotionResultPer100MiliSec last;
         EmotionTools et = new EmotionTools();
         VideoTools.BaseVideo bv;
-        //TimeLineCore tlc;
+        TimeLineCore tlc;
         VideoTools vt;
         public DebugForm()
         {
@@ -76,19 +76,23 @@ namespace FaceMelody
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            //tlc = new TimeLineCore(print);
+            tlc = new TimeLineCore(print);
+            await tlc.load_to_video_track("test_ver_3_no_sync.mp4",true);
+            tlc.load_to_audio_track("testwav.wav", 1);
+            await tlc.save_all_track_to_file("abc_tmp.mp4");
+            MessageBox.Show("done");
             //tlc.load_to_audio_track("testwav2.wav",0);
             //tlc.load_to_audio_track("testwav.wav",1);
 
             
 
-            AudioTools at = new AudioTools();
-            //AudioTools.BaseAudio b1 = at.audio_reader("testwav2.wav");
-            //AudioTools.BaseAudio a2 = at.audio_reader("testwav.wav");
-            VideoTools.BaseVideo v1 = await vt.video_reader("_no_sync_test_ver_2.mp4",true);
+            //AudioTools at = new AudioTools();
+            ////AudioTools.BaseAudio b1 = at.audio_reader("testwav2.wav");
+            ////AudioTools.BaseAudio a2 = at.audio_reader("testwav.wav");
+            //VideoTools.BaseVideo v1 = await vt.video_reader("_no_sync_test_ver_2.mp4",true);
 
-            await vt.video_writer(v1.file, "testwav.wav", "123.mp4");
-            MessageBox.Show("done");
+            //await vt.video_writer(v1.file, "testwav.wav", "123.mp4");
+            //MessageBox.Show("done");
             //List<AudioTools.BaseAudio> b_list = new List<AudioTools.BaseAudio>();
             //b_list.Add(b1); b_list.Add(b2);
             //AudioTools.BaseAudio ans = at.audio_mixer(b_list, 0, 30000);
@@ -160,7 +164,8 @@ namespace FaceMelody
 
         private void button2_Click(object sender, EventArgs e)
         {
-            //tlc.clear_all();
+            tlc.clear_all();
+            Close();
             //List<double> var_list = new List<double>();
             //var_list.Add(0);
             //var_list.Add(4);
@@ -176,7 +181,7 @@ namespace FaceMelody
 
         private void DebugForm_Load(object sender, EventArgs e)
         {
-            vt = new VideoTools(print);
+            //vt = new VideoTools(print);
         }
     }
 }

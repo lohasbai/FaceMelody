@@ -21,6 +21,7 @@ namespace FaceMelody.SystemCore
         private const Int16 _fmtBlockAlign = 4;
         private const float PRECISION = 0.0001f;
         private const int DEFAULT_SAMPLERATE_OUTPUT = 44100;
+
         #endregion
 
         #region BASE_STRUCT
@@ -489,7 +490,7 @@ namespace FaceMelody.SystemCore
         public BaseAudio audio_echoing(BaseAudio src, int start, int end, double proportion = 0.5)
         {
             int start_tick, end_tick;
-            if (!locate(src, start, end, out start_tick, out end_tick))
+            if (!locate(src, start, end, out start_tick, out end_tick) || proportion > 1 || proportion <= 0)
                 return src;
 
             BaseAudio ret = new BaseAudio();

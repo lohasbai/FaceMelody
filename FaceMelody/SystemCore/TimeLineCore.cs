@@ -45,7 +45,30 @@ namespace FaceMelody.SystemCore
         /// <summary>
         /// 混合后的渲染音频
         /// </summary>
-        public const string audio_mix_tmp_file_name = "_audio_tmp_mix_no_sync.wav"; 
+        public const string audio_mix_tmp_file_name = "_audio_tmp_mix_no_sync.wav";
+        /// <summary>
+        /// 是否全部音轨均为空
+        /// </summary>
+        public bool is_all_audio_track_empty
+        {
+            get
+            {
+                for (int i = 0; i < MAX_AUDIO_TRACK; i++)
+                    if (!audio_track[i].is_empty)
+                        return false;
+                return true;
+            }
+        }
+        /// <summary>
+        /// 是否视频轨道为空
+        /// </summary>
+        public bool is_video_track_empty
+        {
+            get
+            {
+                return video_track.is_empty;
+            }
+        }
 
         /// <summary>
         /// 视频轨上的视频
@@ -112,6 +135,8 @@ namespace FaceMelody.SystemCore
                 if (!File.Exists(file))
                     throw new Exception("文件不存在");
                 video_track = await video_tools.video_reader(file,skip_emotion);
+                video_track.audio.copy_to(ref audio_track[0]);
+                save_refresh();
             }
             catch (Exception e)
             {
@@ -121,32 +146,136 @@ namespace FaceMelody.SystemCore
             return true;
         }
         /// <summary>
+        /// 清空某个轨道
+        /// </summary>
+        /// <param name="track_num">-1:视频轨道
+        /// <para>0~(MAX_AUDIO_TRACK-1):音频轨道</para>
+        /// </param>
+        public void clear_track(int track_num)
+        {
+            if (track_num >= MAX_AUDIO_TRACK || track_num < -1)
+                return;
+            else if (track_num == -1)
+                video_track.clear();
+            else
+                audio_track[track_num].clear();
+            save_refresh();
+            return;
+        }
+
+        public async Task<bool> save_all_track_to_file(string output_file)
+        {
+            bool ret = true;
+            try
+            {
+                bool all_track_empty = true;
+                if (!is_video_track_empty)
+                    all_track_empty = false;
+                else
+                {
+                    all_track_empty = is_all_audio_track_empty;
+                }
+                if (all_track_empty)
+                    throw new Exception("所有轨道均为空，无法合成最终文件");
+                if (is_video_track_empty)
+                {
+                    if (Path.GetExtension(output_file) != ".wav")
+                        throw new Exception("在视频轨道为空时仅能输出wav文件");
+                    ret = audio_tools.audio_writer(mix_audio_track, output_file);
+                }
+                else if (is_all_audio_track_empty)
+                {
+                    if (Path.GetExtension(output_file) != ".mp4")
+                        throw new Exception("仅允许输出mp4文件");
+                    ret = await video_tools.video_writer(video_track.file, "", output_file);
+                }
+                else
+                {
+                    if (Path.GetExtension(output_file) != ".mp4")
+                        throw new Exception("仅允许输出mp4文件");
+                    ret = await video_tools.video_writer(
+                        video_track.file, audio_tmp_file_path + "/" + audio_mix_tmp_file_name, output_file);
+                }
+            }
+            catch (Exception e)
+            {
+                System.Windows.Forms.MessageBox.Show(e.Message);
+                return false;
+            }
+            return ret;
+        }
+        /// <summary>
         /// 音轨操作主入口，返回操作是否成功
         /// <para>处理完毕后会自动保存音轨至临时文件，请勿占用</para>
         /// </summary>
         /// <param name="function">
         /// 功能字符串，当前可选：
-        /// <para>gradient: 渐变</para>
+        /// <para>gradient: 渐变（需要附加两个var - 线性两点系数）</para>
+        /// <para>cut：裁剪（不需要附加参数）</para>
+        /// <para>insert：插入（end参数无效，需要一个BaseAudio - 将该Audio插入start点）</para>
+        /// <para>upend：倒放（不需要附加参数）</para>
+        /// <para>echo：回声（需要附加一个var - 回声强度占比，应小于1）</para>
+        /// <para>exchange：交换左右声道（不需要附加参数）</para>
         /// </param>
         /// <param name="track_num">音轨序号</param>
         /// <param name="start">开始操作时间点</param>
         /// <param name="end">结束操作时间点</param>
-        /// <param name="var_list">参数列表，若无参数输入null即可</param>
+        /// <param name="var_append">参数列表</param>
+        /// <param name="src_append">附加音源列表</param>
         /// <returns></returns>
-        public bool audio_function_center(string function, int track_num, int start, int end, List<double> var_list)
+        public bool audio_function_center
+            (string function, int track_num, int start, int end, List<double> var_append = null, List<AudioTools.BaseAudio> src_append = null)
         {
             try
             {
                 if (track_num >= MAX_AUDIO_TRACK)
                     throw new Exception("待处理的轨道编号超过了最大轨道数");
+                if (audio_track[track_num].is_empty)
+                    throw new Exception("试图对空音轨进行操作");
                 switch (function)
                 {
                     case "gradient":
                         {
-                            if (var_list == null || var_list.Count < 2)
+                            if (var_append == null || var_append.Count < 2)
                                 throw new Exception("使用渐变方法时输入了无效的参数");
                             audio_track[track_num] = audio_tools.audio_gradient(
-                                audio_track[track_num], start, end, var_list[0], var_list[1]);
+                                audio_track[track_num], start, end, var_append[0], var_append[1]);
+                            break;
+                        }
+                    case "cut":
+                        {
+                            audio_track[track_num] = audio_tools.audio_cutter(
+                                audio_track[track_num], start, end);
+                            break;
+                        }
+                    case "insert":
+                        {
+                            if (src_append == null || src_append.Count < 1 || src_append[0].is_empty)
+                                throw new Exception("使用插入方法时输入了无效的参数");
+                            audio_track[track_num] = audio_tools.audio_inserter(
+                                audio_track[track_num], src_append[0], start);
+                            break;
+                        }
+                    case "upend":
+                        {
+                            audio_track[track_num] = audio_tools.audio_upending(
+                                audio_track[track_num], start, end);
+                            break;
+                        }
+                    case "echo":
+                        {
+                            if (var_append == null || var_append.Count < 1 || var_append[0] >= 1 || var_append[0] <= 0)
+                                throw new Exception("使用回声方法时输入了无效的参数");
+                            audio_track[track_num] = audio_tools.audio_echoing(
+                                audio_track[track_num], start, end, var_append[0]);
+                            break;
+                        }
+                    case "exchange":
+                        {
+                            if (audio_track[track_num].RVoice == null)
+                                throw new Exception("使用交换声道方法时传入了没有右声道的音频");
+                            audio_track[track_num] = audio_tools.audio_exchanging(
+                                audio_track[track_num], start, end);
                             break;
                         }
                     default:
@@ -177,6 +306,7 @@ namespace FaceMelody.SystemCore
                 {
                     audio_track[i].clear();
                 }
+                video_track.clear();
             }
             catch (Exception e)
             {
@@ -243,7 +373,6 @@ namespace FaceMelody.SystemCore
             }
             return true;
         }
-
         private long max_audio_track_sec()
         {
             long ret = -1;
