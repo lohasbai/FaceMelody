@@ -7,6 +7,7 @@ function MyVideoWriter(video_filepath,audio_filepath,output_filepath)
 
     myobj = VideoWriter(output_filepath,'MPEG-4');
     obj = VideoReader(video_filepath);
+    [audio_,rate_] = audioread(audio_filepath);
     open(myobj);
     
     for k = 1:obj.NumberOfFrames
