@@ -183,5 +183,11 @@ namespace FaceMelody
         {
             //vt = new VideoTools(print);
         }
+
+        private void DebugForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (tlc != null)
+                tlc.clear_all();
+        }
     }
 }

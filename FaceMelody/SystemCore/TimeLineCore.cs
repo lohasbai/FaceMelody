@@ -162,7 +162,13 @@ namespace FaceMelody.SystemCore
             save_refresh();
             return;
         }
-
+        /// <summary>
+        /// 保存混流文件，请注意：
+        /// <para>若只有音轨，则只能输出为wav</para>
+        /// <para>若有视频轨，则只能输出为mp4</para>
+        /// </summary>
+        /// <param name="output_file">包含路径的完整输出文件名</param>
+        /// <returns></returns>
         public async Task<bool> save_all_track_to_file(string output_file)
         {
             bool ret = true;

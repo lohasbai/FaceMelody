@@ -53,7 +53,7 @@ namespace FaceMelody.SystemCore
             {
                 get
                 {
-                    return (file == "");
+                    return (file == null || file == "");
                 }
             }
         }
