@@ -9,6 +9,8 @@ Material
 *.sln.docstates
 *no_sync*
 *App.xaml.cs
+FaceMelody/App.xaml.cs
+
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
