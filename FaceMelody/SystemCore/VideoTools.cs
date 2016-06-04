@@ -13,7 +13,7 @@ namespace FaceMelody.SystemCore
     {
         #region CONST
         /// <summary>
-        /// 视频读取超时（毫秒数/10）
+        /// 视频读取/渲染超时（毫秒数/10）
         /// <para>分钟 * 60 * 100</para>
         /// </summary>
         const int TIME_OUT = 5 * 60 * 100;
@@ -168,11 +168,37 @@ namespace FaceMelody.SystemCore
         {
             try
             {
-                if (!File.Exists(video_file) || !File.Exists(audio_file))
-                    throw new Exception("找不到视频或音频文件");
+                if (!File.Exists(video_file) || !File.Exists(audio_file) || Path.GetExtension(audio_file) != ".wav" || Path.GetExtension(video_file) != ".mp4")
+                    throw new Exception("找不到视频或音频文件或文件格式不合法");
+                if (Path.GetExtension(output_file) != ".mp4")
+                    throw new Exception("输出文件名错误或文件格式不合法");
                 if (File.Exists(output_file))
                     File.Delete(output_file);
-                
+
+                // ./ffmpeg.exe -i _no_sync_test_ver_2.mp4 -i testwav.wav -map 0:0 -map 1:0 123.mp4
+                Process ffmpeg_pro = new Process();
+                ProcessStartInfo start_info = new ProcessStartInfo("ffmpeg.exe",
+                    "-i " + video_file + " -i " + audio_file + " -map 0:0 -map 1:0 " + output_file);
+                ffmpeg_pro.StartInfo = start_info;
+                fast_callback(0, "渲染前检查", "渲染");
+                await Task.Run(() =>
+                {
+                    ffmpeg_pro.Start();
+                    int i = 0;
+                    while (true)
+                    {
+                        System.Threading.Thread.Sleep(10);
+                        i++;
+                        if (i > TIME_OUT)
+                        {
+                            ffmpeg_pro.Kill();
+                            throw new Exception("程序运行超时");
+                        }
+                        if (ffmpeg_pro.HasExited)
+                            break;
+                    }
+                });
+                fast_callback(1, "渲染", "返回结果");
             }
             catch (Exception e)
             {

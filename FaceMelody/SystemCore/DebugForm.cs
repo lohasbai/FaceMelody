@@ -87,7 +87,8 @@ namespace FaceMelody
             //AudioTools.BaseAudio a2 = at.audio_reader("testwav.wav");
             VideoTools.BaseVideo v1 = await vt.video_reader("_no_sync_test_ver_2.mp4",true);
 
-            vt.video_writer(v1.file, "testwav.wav", "123.mp4");
+            await vt.video_writer(v1.file, "testwav.wav", "123.mp4");
+            MessageBox.Show("done");
             //List<AudioTools.BaseAudio> b_list = new List<AudioTools.BaseAudio>();
             //b_list.Add(b1); b_list.Add(b2);
             //AudioTools.BaseAudio ans = at.audio_mixer(b_list, 0, 30000);
