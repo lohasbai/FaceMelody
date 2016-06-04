@@ -164,6 +164,24 @@ namespace FaceMelody.SystemCore
             return ret;
         }
 
+        public async Task<bool> video_writer(string video_file, string audio_file,string output_file)
+        {
+            try
+            {
+                if (!File.Exists(video_file) || !File.Exists(audio_file))
+                    throw new Exception("找不到视频或音频文件");
+                if (File.Exists(output_file))
+                    File.Delete(output_file);
+                
+            }
+            catch (Exception e)
+            {
+                System.Windows.Forms.MessageBox.Show(e.Message);
+                return false;
+            }
+            return true;
+        }
+
         #endregion
 
         #region PRIVATE_FUNCTION
