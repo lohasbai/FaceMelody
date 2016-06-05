@@ -115,6 +115,7 @@ namespace FaceMelody
         private async void LoadVideo_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            openFileDialog.Filter = "视频文件(mp4)|*.mp4";
 
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -133,6 +134,7 @@ namespace FaceMelody
                     curAddTrack = 1;
                     DrawWave(timeLine.audio_track[curAddTrack - 1].LVoice, 
                         timeLine.audio_track[curAddTrack - 1].SampleRate, curAddTrack);
+                    soundPlayer = new MediaPlayer();
 
                     if (isVideoRead)
                     {
@@ -149,6 +151,7 @@ namespace FaceMelody
         private void LoadVoice_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            openFileDialog.Filter = "音频文件(wav)|*.wav";
 
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -156,13 +159,33 @@ namespace FaceMelody
                 if (filePath != "" || filePath != null)
                 {
                     LoadVoice(filePath);
+                    soundPlayer = new MediaPlayer();
                 }
             }
         }
 
+
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            await timeLine.save_all_track_to_file("mixTest.mp4");
+            System.Windows.Forms.SaveFileDialog saveFileDialog = new System.Windows.Forms.SaveFileDialog();
+            if (timeLine.is_video_track_empty)
+            {
+                saveFileDialog.Filter = "音频文件(wav)|*.wav";
+            }
+            else
+            {
+                saveFileDialog.Filter = "视频文件(mp4)|*.mp4";
+            }
+
+            if (saveFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                string filePath = saveFileDialog.FileName;
+                if (filePath != "" || filePath != null)
+                {
+                    await timeLine.save_all_track_to_file(filePath);
+                }
+            }
+
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -253,6 +276,19 @@ namespace FaceMelody
             Play_Image.Visibility = Visibility.Hidden;
         }
 
+
+        private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e)
+        {
+            isPlay = false;
+            this.VideoPlayer.Position = TimeSpan.FromMilliseconds(100);
+            this.VideoPlayer.Play();
+            Thread.Sleep(50);
+            this.VideoPlayer.Pause();
+        }
+
+#endregion
+
+        #region Display
         private void Play_Image_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (!isPlay)
@@ -283,15 +319,6 @@ namespace FaceMelody
             }
         }
 
-        private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e)
-        {
-            isPlay = false;
-            this.VideoPlayer.Position = TimeSpan.FromMilliseconds(100);
-            this.VideoPlayer.Play();
-            Thread.Sleep(50);
-            this.VideoPlayer.Pause();
-        }
-
         private void DisplayRecognitionResult(double curVideoTime)
         {
             int recognitionResultIndex = Convert.ToInt16(Math.Floor((curVideoTime /1000) / 3));
@@ -303,7 +330,7 @@ namespace FaceMelody
 
             if (timeLine.video_track.emotion_per_3_sec[recognitionResultIndex]!= null)
             {
-                int faceNum = 1;
+                int faceNum = timeLine.video_track.emotion_per_3_sec[recognitionResultIndex].Count();
                 DrawFaceFrame_Canvas.Children.Clear();
                 DisplayRecognitionText_Canvas.Children.Clear();
                 for (int i = 0; i < faceNum; i++)
@@ -345,11 +372,10 @@ namespace FaceMelody
             Rectangle faceFrame = new Rectangle();
             faceFrame.Width = actualFrameHeight;
             faceFrame.Height = actualFrameWidth;
+            faceFrame.Stroke = Brushes.White;
+            faceFrame.StrokeThickness = 1.5;
             faceFrame.SetValue(Canvas.LeftProperty, actualFrameLeft);
             faceFrame.SetValue(Canvas.TopProperty, actualFrameTop);
-            BrushConverter brushConverter = new BrushConverter();
-            Brush myBrush = (Brush)brushConverter.ConvertFromString("#40FFFFFF");
-            faceFrame.Fill = myBrush;
             DrawFaceFrame_Canvas.Children.Insert(0, faceFrame);
 
             //MessageBox.Show("zoomRatio: " + zoomRatio.ToString() +
@@ -380,7 +406,8 @@ namespace FaceMelody
             emotionScore[7] = timeLine.video_track.emotion_per_3_sec[recognizeResultIndex]
                 [faceIndex].Scores.Surprise;
 
-            string[] emotionMapping = {"愤怒", "轻蔑", "厌恶", "恐惧", "开心", "平静", "悲伤", "惊讶"};
+            string[] emotionMapping = { "愤怒", "轻蔑", "厌恶", "恐惧", "开心", "平静", "悲伤", "惊讶" };
+            string[] emotionSuggestion = { "激昂", "激昂", "激昂", "紧张", "活泼", "柔和", "肃穆", "夸张"};
 
             // Find the most obvious three emotion
             int[] emotionIndex = {-1, -1, -1};
@@ -408,7 +435,7 @@ namespace FaceMelody
                           Math.Round(100 * emotionScore[emotionIndex[1]], 2).ToString() + "%\n" +
                           emotionMapping[emotionIndex[2]] + ": " +
                           Math.Round(100 * emotionScore[emotionIndex[2]], 2).ToString() + "%\n" +
-                          "建议选用 的音乐",
+                          "建议选用" + emotionSuggestion[emotionIndex[0]] + "的音乐",
                 FontSize = 12,
                 Background = new SolidColorBrush(Color.FromArgb(100, 35, 35, 35)),
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
@@ -416,16 +443,12 @@ namespace FaceMelody
                 Width = 177,
                 LineHeight = 20,
             };
-            TextBlock.SetValue(Canvas.TopProperty, Convert.ToDouble(faceIndex * 80 + 10));
+            TextBlock.SetValue(Canvas.TopProperty, Convert.ToDouble(faceIndex * 100 + 20));
             TextBlock.SetValue(Canvas.LeftProperty, Convert.ToDouble(5));
 
             DisplayRecognitionText_Canvas.Children.Insert(0, TextBlock);
 
         }
-
-        #endregion
-
-        #region Information
 
         #endregion
 
@@ -707,13 +730,22 @@ namespace FaceMelody
                 if (waveHeightArray[i] > 0)
                 {
                     waveLine.Height = 1000 * waveHeight * waveHeightArray[i];
+                    if (waveLine.Height > 12.5)
+                    {
+                        waveLine.Height = 12.5;
+                    }
                     waveLine.SetValue(Canvas.TopProperty, 12.5 - waveLine.Height);
                 }
                 else
                 {
                     waveLine.Height = -waveHeight * waveHeightArray[i] * 1000;
+                    if (waveLine.Height > 12.5)
+                    {
+                        waveLine.Height = 12.5;
+                    }
                     waveLine.SetValue(Canvas.TopProperty, 12.5);
                 }
+
                 waveLine.SetValue(Canvas.LeftProperty, Convert.ToDouble(waveWidth * i));
                 //MessageBox.Show((1000*waveHeightArray[i]).ToString());
 
@@ -783,33 +815,39 @@ namespace FaceMelody
 
             // Display the percentage
             int processInt = Convert.ToInt16(e.percent*100);
-            Precess_Label.Content = processInt.ToString()+"%";
             if (processInt == 100)
             {
                 ToDo_Label.Content = "完毕";
-            }
-
-            // Draw the process bar
-            double width = e.percent * 250;
-            Rectangle preProcessBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
-            if (preProcessBar == null)
-            {
-                Rectangle processBar = new Rectangle();
-                processBar.Width = width;
-                processBar.Height = 15;
-                processBar.SetValue(Canvas.LeftProperty, 0.0);
-                processBar.SetValue(Canvas.TopProperty, 0.0);
-
-                BrushConverter brushConverter = new BrushConverter();
-                Brush myBrush = (Brush)brushConverter.ConvertFromString("#802980B9");
-                processBar.Fill = myBrush;
-                Process_Canvas.Children.Insert(0, processBar);
-                Process_Canvas.RegisterName("process_Rectangle", processBar);
+                Rectangle preProcessBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
+                Process_Canvas.Children.Remove(preProcessBar);
+                Process_Canvas.UnregisterName("process_Rectangle");
+                Precess_Label.Visibility = System.Windows.Visibility.Hidden;
             }
             else
             {
-                Rectangle processBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
-                processBar.Width = width;
+                Precess_Label.Content = processInt.ToString() + "%";
+                // Draw the process bar
+                double width = e.percent * 250;
+                Rectangle preProcessBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
+                if (preProcessBar == null)
+                {
+                    Rectangle processBar = new Rectangle();
+                    processBar.Width = width;
+                    processBar.Height = 15;
+                    processBar.SetValue(Canvas.LeftProperty, 0.0);
+                    processBar.SetValue(Canvas.TopProperty, 0.0);
+
+                    BrushConverter brushConverter = new BrushConverter();
+                    Brush myBrush = (Brush)brushConverter.ConvertFromString("#802980B9");
+                    processBar.Fill = myBrush;
+                    Process_Canvas.Children.Insert(0, processBar);
+                    Process_Canvas.RegisterName("process_Rectangle", processBar);
+                }
+                else
+                {
+                    Rectangle processBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
+                    processBar.Width = width;
+                }
             }
         }
         #endregion

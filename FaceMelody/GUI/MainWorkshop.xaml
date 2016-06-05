@@ -1,7 +1,7 @@
 ﻿<Window x:Class="FaceMelody.MainWorkshop"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWorkshop" Height="600" Width="960" Closing="Window_Closing">
+        Title="FaceMelody" Icon=".\Icon\FM.ico" Height="600" Width="960" Closing="Window_Closing">
 
 
 
