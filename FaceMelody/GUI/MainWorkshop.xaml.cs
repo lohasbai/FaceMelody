@@ -17,6 +17,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Diagnostics;
 using System.IO;
+using System.Timers;  
+
 
 using FaceMelody.SystemCore;
 
@@ -48,14 +50,16 @@ namespace FaceMelody
         public double originVideoWidth;
         public double actualVideoHeight;
         public double actualVideoWidth;
-        public System.Timers.Timer drawTimer;
-
+        System.Timers.Timer drawTimer;
+        public double curDrawTime;
+            
         public double curX;
 
         public bool isSelect;
         public bool isArea;
         public bool isEffect;
         public bool isDelete;
+        System.Timers.Timer moveTimer;
 
         public bool isPlay;
         public bool isVideoRead;
@@ -102,6 +106,10 @@ namespace FaceMelody
             isDelete = false;
 
             isDrawing = false;
+
+            moveTimer = new System.Timers.Timer();
+            drawTimer = new System.Timers.Timer();
+           // drawTimer = new System.Windows.Threading.DispatcherTimer();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -131,10 +139,22 @@ namespace FaceMelody
 
                     isVideoRead = await timeLine.load_to_video_track(filePath);
 
-                    curAddTrack = 1;
-                    DrawWave(timeLine.audio_track[curAddTrack - 1].LVoice, 
-                        timeLine.audio_track[curAddTrack - 1].SampleRate, curAddTrack);
-                    soundPlayer = new MediaPlayer();
+                    if (isVideoRead)
+                    {
+                        curAddTrack = 1;
+                        DrawWave(timeLine.audio_track[curAddTrack - 1].LVoice,
+                            timeLine.audio_track[curAddTrack - 1].SampleRate, curAddTrack);
+                        soundPlayer = new MediaPlayer();
+
+                        curDrawTime = 100;
+                        curX = TimeToPostion((int)curDrawTime);
+                        DrawSelectBar();
+
+                        this.VideoPlayer.Position = TimeSpan.FromMilliseconds(100);
+                        this.VideoPlayer.Play();
+                        Thread.Sleep(50);
+                        this.VideoPlayer.Pause();
+                    }
 
                     if (isVideoRead)
                     {
@@ -200,7 +220,6 @@ namespace FaceMelody
         }
 
         #endregion
-
 
         #region Voice
 
@@ -302,12 +321,10 @@ namespace FaceMelody
                 this.soundPlayer.Play();
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Pause_Icon.png", UriKind.Relative));
 
-                if (isVideoRead)
-                {
-                    //drawTimer = new System.Timers.Timer(3000);
-                    //drawTimer.Elapsed += new System.Timers.ElapsedEventHandler(DisplayInformation);
-                    //DisplayInformation(6000);
-                }
+                moveTimer = new System.Timers.Timer();
+                moveTimer.Elapsed += new ElapsedEventHandler(BarMoveEvent);
+                moveTimer.Interval = 50;
+                moveTimer.Enabled = true;
             }
             else
             {
@@ -315,9 +332,30 @@ namespace FaceMelody
                 this.VideoPlayer.Pause();
                 this.soundPlayer.Pause();
                 this.soundPlayer.Close();
+                drawTimer.Close();
+                moveTimer.Close();
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Play_Icon.png", UriKind.Relative));
             }
         }
+
+        private void BarMoveEvent(object sender, ElapsedEventArgs e)
+        {
+            if (curDrawTime >= videoLength)
+            {
+                curDrawTime = 100;
+                moveTimer.Close();
+            }
+            curX = TimeToPostion((int)curDrawTime);
+            this.Dispatcher.Invoke(new Action(() =>
+            {
+                DrawSelectBar();
+                if (isVideoRead)
+                {
+                    DisplayRecognitionResult(curDrawTime);
+                }
+            }));
+            curDrawTime += 50;
+        }   
 
         private void DisplayRecognitionResult(double curVideoTime)
         {
@@ -530,36 +568,44 @@ namespace FaceMelody
         {
             if (isSelect)
             {
+                // Stop moving the bar
+                moveTimer.Close();
+
                 // Get current position of select bar
                 Point curPoint = e.GetPosition(this.Timeline_Area_Canvas);
-                curX = curPoint.X;
-                // Draw the current select bar
-                DrawSelectBar();
+                curX = curPoint.X;             
                 // Display the video at current position
-                int curTime = PositionToTime(curX);
-                if (curTime > (int)videoLength - 100)
+                curDrawTime = PositionToTime(curX);
+                if (curDrawTime > (int)videoLength - 100)
                 {
-                    curTime = (int)videoLength - 100;
+                    curDrawTime = (int)videoLength - 100;
+                    curX = TimeToPostion((int)curDrawTime);
+                    moveTimer.Close();
                 }
-                if (curTime < 100)
+                if (curDrawTime < 100)
                 {
-                    curTime = 100;
+                    curDrawTime = 100;
+                    curX = TimeToPostion((int)curDrawTime);
+                    moveTimer.Close();
                 }
-                this.VideoPlayer.Position = TimeSpan.FromMilliseconds(curTime - 50);
+                this.VideoPlayer.Position = TimeSpan.FromMilliseconds(curDrawTime - 50);
                 this.VideoPlayer.Play();
                 Thread.Sleep(50);
                 this.VideoPlayer.Pause();
                 // Display the video at current position
-                this.soundPlayer.Position = TimeSpan.FromMilliseconds(curTime);
+                this.soundPlayer.Position = TimeSpan.FromMilliseconds(curDrawTime);
                 this.soundPlayer.Pause();
-
+                // Update status
                 isPlay = false;
                 Play_Image.Source = new BitmapImage(new Uri(@".\Icon\Play_Icon.png", UriKind.Relative));
                 // Add face frames
                 if (isVideoRead)
                 {
-                    DisplayRecognitionResult(curTime);
+                    drawTimer.Close();
+                    DisplayRecognitionResult(curDrawTime);
                 }
+                // Draw the current select bar
+                DrawSelectBar();
             }
             if (isArea)
             {
@@ -674,7 +720,7 @@ namespace FaceMelody
             }
 
             // Draw new video area
-            double width = videoLength/fullTimeLength*870;
+            double width = TimeToPostion((int)videoLength);
 
             Rectangle videoArea = new Rectangle();
             videoArea.Width = width;
@@ -775,12 +821,17 @@ namespace FaceMelody
             List<double> parameter = new List<double>();
             parameter.Add(1.0);
             parameter.Add(0.1);
-            timeLine.audio_function_center("gradient", curEditTrack - 1, 100, 10000, parameter);
+            timeLine.audio_function_center("gradient", curEditTrack - 1, PositionToTime(startX), PositionToTime(endX), parameter);
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
         }
 
         private void Strengthen_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
+            List<double> parameter = new List<double>();
+            parameter.Add(1.0);
+            parameter.Add(0.1);
+            timeLine.audio_function_center("gradient", curEditTrack - 1, PositionToTime(startX), PositionToTime(endX), parameter);
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
         }
 
         private void Insert_Label_MouseDown(object sender, MouseButtonEventArgs e)
@@ -796,13 +847,17 @@ namespace FaceMelody
        
         private void Echo_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
+            List<double> parameter = new List<double>();
+            parameter.Add(0.3);
+            timeLine.audio_function_center("echo", curEditTrack - 1, PositionToTime(startX), PositionToTime(endX), parameter);
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
         }
 
 
         private void SoundTrack_Label_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
+            timeLine.audio_function_center("exchange", curEditTrack - 1, PositionToTime(startX), PositionToTime(endX));
+            DrawWave(timeLine.audio_track[curEditTrack - 1].LVoice, timeLine.audio_track[curEditTrack - 1].SampleRate, curEditTrack);
         }
 
         #endregion
@@ -821,7 +876,7 @@ namespace FaceMelody
                 Rectangle preProcessBar = Timeline_Area_Canvas.FindName("process_Rectangle") as Rectangle;
                 Process_Canvas.Children.Remove(preProcessBar);
                 Process_Canvas.UnregisterName("process_Rectangle");
-                Precess_Label.Visibility = System.Windows.Visibility.Hidden;
+                Precess_Label.Content = " ";
             }
             else
             {
